@@ -1,11 +1,12 @@
 # 🧠 Life OS - Sistema de Organização Pessoal
 
-> Sistema modular de linha de comando para organização pessoal com agregação inteligente de notícias
+> Sistema modular de linha de comando para organização pessoal com agregação inteligente de notícias e gerenciamento completo de tarefas via Todoist
 
 [![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://python.org)
 [![MongoDB](https://img.shields.io/badge/MongoDB-7.0-green.svg)](https://mongodb.com)
 [![Docker](https://img.shields.io/badge/Docker-Compose-blue.svg)](https://docker.com)
 [![Rich](https://img.shields.io/badge/Terminal-Rich%20UI-orange.svg)](https://rich.readthedocs.io)
+[![Todoist](https://img.shields.io/badge/Todoist-API%20v2-red.svg)](https://developer.todoist.com)
 
 ## 🚀 Quick Start
 
@@ -15,10 +16,14 @@ git clone <repository-url>
 cd life-os
 pip install -r requirements.txt
 
-# 2. Inicie o MongoDB (recomendado)
+# 2. Configure as variáveis de ambiente
+cp .env.example .env
+# Configure seu TODOIST_API_TOKEN e outras preferências
+
+# 3. Inicie o MongoDB (recomendado)
 ./scripts/start-mongodb.sh
 
-# 3. Execute o Life OS
+# 4. Execute o Life OS
 python main.py
 ```
 
@@ -41,9 +46,20 @@ python main.py
 - ⏰ **Documentos Recentes**: Visualiza últimas inserções com formatação rica
 - 🧪 **Ferramentas Diagnóstico**: Utilitário completo para testar conexões MongoDB
 
+### ✅ **Módulo de Tarefas** (Implementado)
+- 🔄 **Integração Todoist**: Cliente API REST v2 com operações CRUD completas
+- 📝 **Gerenciamento de Tarefas**: Criar, editar, concluir e excluir tarefas
+- 🎯 **Prioridades e Prazos**: Sistema de 4 níveis e linguagem natural para datas
+- 📁 **Projetos Organizados**: Criação com cores, hierarquia e estatísticas
+- 🏷️ **Sistema de Etiquetas**: Múltiplas etiquetas por tarefa com cores personalizadas
+- 📊 **Dashboard Analítico**: Métricas completas e distribuição visual de tarefas
+- 🔍 **Busca Avançada**: Filtros por texto, projeto, prioridade e período
+- ✅ **Histórico Completo**: Tarefas concluídas com análise temporal
+- 📤 **Export de Dados**: Exportação completa para JSON com metadata
+- 🎨 **Interface Rica**: Terminal UI intuitivo com navegação por teclas
+
 ### 🔮 **Módulos Futuros**
 - 📅 **Agenda**: Gerenciamento de compromissos e eventos
-- ✅ **Tarefas**: Sistema de gerenciamento de tarefas e projetos
 - 💰 **Finanças**: Controle financeiro pessoal
 - 📝 **Notas**: Sistema de anotações e documentação
 - 🎯 **Hábitos**: Rastreamento e desenvolvimento de hábitos
@@ -74,6 +90,15 @@ graph TB
         RECENT[Recent Documents]
     end
     
+    subgraph "✅ Tasks Module"
+        TASKS[Tasks Menu]
+        TASKLIST[Task Management]
+        PROJECTS[Project Management]
+        LABELS[Label Management]
+        DASHBOARD[Analytics Dashboard]
+        EXPORT[Data Export]
+    end
+    
     subgraph "🔄 Data Processing"
         AGG[News Aggregator]
         SCRAPER[TabNews Scraper]
@@ -92,14 +117,16 @@ graph TB
         ENV[Environment<br/>Variables]
     end
     
-    subgraph "🌐 External"
+    subgraph "🌐 External APIs"
         TABNEWS[TabNews.com.br]
+        TODOIST[Todoist API v2]
     end
     
     %% User Flow
     UI --> MAIN
     MAIN --> NEWS
     MAIN --> TOOLS
+    MAIN --> TASKS
     NEWS --> PAGINATE
     PAGINATE --> DETAIL
     DETAIL --> COMMENTS
@@ -109,6 +136,11 @@ graph TB
     MONGO --> COLLECTIONS
     MONGO --> SEARCH
     MONGO --> RECENT
+    TASKS --> TASKLIST
+    TASKS --> PROJECTS
+    TASKS --> LABELS
+    TASKS --> DASHBOARD
+    TASKS --> EXPORT
     
     %% Data Flow
     AGG --> SCRAPER
@@ -117,6 +149,7 @@ graph TB
     AGG --> MONGO
     AGG --> JSON
     NEWS --> AGG
+    TASKS --> TODOIST
     
     %% Configuration
     CONFIG --> ENV
@@ -138,10 +171,10 @@ graph TB
     classDef external fill:#ffebee
     
     class UI,MAIN interface
-    class NEWS,PAGINATE,DETAIL,COMMENTS,STATS,TOOLS,MONGO,STATUS,COLLECTIONS,SEARCH,RECENT module
+    class NEWS,PAGINATE,DETAIL,COMMENTS,STATS,TOOLS,MONGO,STATUS,COLLECTIONS,SEARCH,RECENT,TASKS,TASKLIST,PROJECTS,LABELS,DASHBOARD,EXPORT module
     class AGG,SCRAPER,RATE,MONGO,JSON,CONFIG data
     class DOCKER,MONGOEX,ENV infra
-    class TABNEWS external
+    class TABNEWS,TODOIST external
 ```
 
 ## 🔧 Architecture Components
@@ -292,17 +325,25 @@ python main.py
 ## 📖 Usage Guide
 
 ### Basic Navigation
-1. **Main Menu**: Choose module (News, Tools, or Future Modules)
+1. **Main Menu**: Choose module (News, Tasks, Tools, or Future Modules)
 2. **News Module**: 
    - `1` - View latest articles (with instant cache loading)
    - `2-5` - Manage sources and settings
    - `6` - View database statistics (local/remote) with cache metrics
    - `M` - Return to main menu from any submenu
-3. **Tools Module**: 
+3. **Tasks Module**: 
+   - `1` - Task management (CRUD operations)
+   - `2` - Project management with colors and statistics
+   - `3` - Label management and assignment
+   - `4` - Analytics dashboard with visual metrics
+   - `5-6` - Search, filters, and completed tasks
+   - `7` - Export data and configuration
+   - `M` - Return to main menu from any submenu
+4. **Tools Module**: 
    - `1` - MongoDB Manager with 5 powerful features
    - `M` - Return to main menu
-4. **Article List**: Type article number to read full content instantly
-5. **Article View**: Switch between content and comments with enhanced navigation
+5. **Article List**: Type article number to read full content instantly
+6. **Article View**: Switch between content and comments with enhanced navigation
 
 ### Database Configuration
 ```bash
@@ -364,6 +405,10 @@ REMOTE_MONGODB_URI=mongodb://user:pass@host:port/database
 ```bash
 NEWS_UPDATE_INTERVAL_HOURS=6
 MAX_ARTICLES_PER_SOURCE=50
+
+# Todoist Integration
+TODOIST_API_TOKEN=your_todoist_api_token_here
+
 DEBUG=false
 ```
 
@@ -496,7 +541,7 @@ python main.py
 
 ### Phase 3: Additional Modules 📋
 - [ ] Calendar/Agenda module
-- [ ] Task management system
+- [x] **Task management system** with full Todoist integration
 - [ ] Personal finance tracker
 - [ ] Note-taking system
 - [ ] Habit tracker
@@ -523,6 +568,7 @@ pip install -r requirements.txt
 # Run tests
 python -c "from scrapers.tabnews_scraper import TabNewsScraper; print('✅ Scraper OK')"
 python -c "from modules.tools import MongoDBTool; print('✅ Tools Module OK')"
+python -c "from modules.tasks import TasksModule; print('✅ Tasks Module OK')"
 
 # Check system configuration
 python -c "from utils.config import Config; Config.print_config()"
@@ -532,6 +578,21 @@ python utils/test_connection.py "mongodb://connection-string"
 
 # Test Tools Module features
 python modules/tools.py
+
+# Test Tasks Module features
+python modules/tasks.py
+
+# Test Todoist API integration
+python -c "
+from utils.todoist_client import TodoistClient
+from utils.config import Config
+if Config.TODOIST_API_TOKEN:
+    client = TodoistClient(Config.TODOIST_API_TOKEN)
+    projects = client.get_projects()
+    print(f'✅ Todoist OK: {len(projects)} projetos')
+else:
+    print('⚠️ TODOIST_API_TOKEN não configurado')
+"
 
 # Switch database modes for testing
 # Edit DATABASE_MODE in .env file
@@ -544,6 +605,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🙏 Acknowledgments
 
 - **TabNews**: Primary news source (https://tabnews.com.br)
+- **Todoist**: Task management API and platform (https://todoist.com)
 - **Rich**: Beautiful terminal interfaces (https://rich.readthedocs.io)
 - **MongoDB**: Robust document database (local & remote)
 - **Docker**: Containerization platform for local development
@@ -556,6 +618,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **[⬆ Back to Top](#-life-os---sistema-de-organização-pessoal)**
 
-Made with ❤️ using Python, MongoDB (Local & Remote), and Rich Terminal UI
+Made with ❤️ using Python, MongoDB (Local & Remote), Todoist API, and Rich Terminal UI
 
 </div>

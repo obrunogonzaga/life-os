@@ -1,7 +1,7 @@
 # Life OS - Sistema de Organização Pessoal
 
 ## Overview
-Life OS é um sistema modular de linha de comando para organização pessoal, com módulos para diferentes aspectos da vida. Atualmente conta com um módulo de agregação de notícias de tecnologia totalmente funcional, com persistência MongoDB e visualização completa de artigos.
+Life OS é um sistema modular de linha de comando para organização pessoal, com módulos para diferentes aspectos da vida. Atualmente possui módulos totalmente funcionais de notícias de tecnologia e gerenciamento de tarefas integrado ao Todoist, além de ferramentas avançadas de gerenciamento MongoDB.
 
 ## Quick Start
 
@@ -14,21 +14,24 @@ cd life-os
 # 2. Install Python dependencies
 pip install -r requirements.txt
 
-# 3. Start MongoDB (optional but recommended)
+# 3. Configure environment variables
+cp .env.example .env
+# Edit .env file with your MongoDB and Todoist configurations
+
+# 4. Start MongoDB (optional but recommended)
 ./scripts/start-mongodb.sh
 
-# 4. Run Life OS
+# 5. Run Life OS
 python main.py
 ```
 
 ### 🎯 First Use
 1. **Launch Life OS**: Run `python main.py`
-2. **Enter News Module**: Select option `1` (📰 Notícias)
-3. **View Latest News**: Select option `1` (📰 Últimas notícias)
-4. **Read an Article**: Type any article number to view full content
-5. **Navigate Efficiently**: Use `M` to return to main menu from any submenu
-6. **Explore Tools**: Try option `2` (🔧 Ferramentas) to manage MongoDB and system utilities
-7. **Explore Features**: Try other options for management and statistics
+2. **Configure Todoist**: Set your `TODOIST_API_TOKEN` in the `.env` file to enable task management
+3. **Explore News**: Select option `1` (📰 Notícias) to read latest tech news
+4. **Manage Tasks**: Select option `4` (✅ Tarefas) to manage your Todoist tasks, projects, and labels
+5. **Use Tools**: Try option `2` (🔧 Ferramentas) to manage MongoDB and system utilities
+6. **Navigate Efficiently**: Use `M` to return to main menu from any submenu
 
 ## Project Structure
 ```
@@ -37,6 +40,7 @@ life-os/
 ├── modules/                   # Módulos funcionais do sistema
 │   ├── __init__.py
 │   ├── news.py               # Módulo de notícias com interface completa
+│   ├── tasks.py              # Módulo de tarefas integrado ao Todoist
 │   └── tools.py              # Módulo de ferramentas e gerenciamento MongoDB
 ├── scrapers/                 # Web scrapers para diferentes sites
 │   ├── __init__.py
@@ -47,6 +51,7 @@ life-os/
 │   ├── config_manager.py     # Gerencia sites ativos/inativos
 │   ├── database_manager.py   # Gerenciador MongoDB com fallbacks
 │   ├── news_aggregator.py    # Agrega notícias com controle de rate limiting
+│   ├── todoist_client.py     # Cliente da API do Todoist
 │   └── test_connection.py    # Utilitário para testar conexões MongoDB
 ├── docker/                   # Configuração Docker
 │   └── mongo-init.js         # Script de inicialização do MongoDB
@@ -83,8 +88,17 @@ life-os/
 ### 📅 Agenda (Em breve)
 - Gerenciamento de compromissos e eventos
 
-### ✅ Tarefas (Em breve)
-- Sistema de gerenciamento de tarefas e projetos
+### ✅ Tarefas (Implementado)
+- **Integração Completa Todoist**: Cliente API com todas as operações CRUD
+- **Gerenciamento de Tarefas**: Criar, editar, concluir e excluir tarefas
+- **Prioridades e Prazos**: Definir prioridades (1-4) e datas de vencimento
+- **Projetos e Organização**: Criar e gerenciar projetos com cores personalizadas
+- **Sistema de Etiquetas**: Criar etiquetas e atribuir múltiplas por tarefa
+- **Dashboard Analítico**: Estatísticas completas e distribuição de tarefas
+- **Busca e Filtros**: Busca por texto e filtros por projeto/prioridade
+- **Histórico Completo**: Visualização de tarefas concluídas com períodos
+- **Export de Dados**: Exportação completa para JSON
+- **Interface Rica**: Terminal UI com Rich library e navegação intuitiva
 
 ### 💰 Finanças (Em breve)
 - Controle financeiro pessoal
@@ -127,12 +141,58 @@ class Comentario:
     respostas: List[Comentario]   # Nested replies (future)
 ```
 
+### Todoist Data Structures
+```python
+@dataclass
+class TodoistTask:
+    id: str                           # Unique task ID
+    content: str                      # Task title/content
+    description: Optional[str]        # Task description
+    project_id: Optional[str]         # Associated project ID
+    section_id: Optional[str]         # Section within project
+    parent_id: Optional[str]          # Parent task (for subtasks)
+    order: int                        # Task order
+    priority: int                     # Priority level (1-4, 4=highest)
+    due: Optional[Dict[str, Any]]     # Due date information
+    labels: List[str]                 # Assigned labels
+    is_completed: bool                # Completion status
+    created_at: Optional[str]         # Creation timestamp
+    assignee_id: Optional[str]        # Assignee (for shared projects)
+    comment_count: int                # Number of comments
+    url: Optional[str]                # Todoist web URL
+
+@dataclass
+class TodoistProject:
+    id: str                           # Unique project ID
+    name: str                         # Project name
+    color: str                        # Project color theme
+    parent_id: Optional[str]          # Parent project (for hierarchy)
+    order: int                        # Project order
+    comment_count: int                # Number of comments
+    is_shared: bool                   # Shared project flag
+    is_favorite: bool                 # Favorite status
+    is_inbox_project: bool            # Inbox project flag
+    is_team_inbox: bool               # Team inbox flag
+    url: str                          # Todoist web URL
+    view_style: str                   # View style (list/board)
+
+@dataclass
+class TodoistLabel:
+    id: str                           # Unique label ID
+    name: str                         # Label name
+    color: str                        # Label color
+    order: int                        # Label order
+    is_favorite: bool                 # Favorite status
+```
+
 ### System Architecture
 - **Three-Tier Persistence**: MongoDB → JSON → Memory cache
 - **Rate Limiting**: Configurable update intervals (default: 6 hours)
 - **Modular Design**: Easy addition of new scrapers and modules
 - **Docker Integration**: Zero-config setup with automated database
 - **Environment Management**: Flexible configuration via .env files
+- **API Integration**: RESTful clients for external services (Todoist)
+- **Rich Terminal UI**: Advanced terminal interfaces with formatting and interactivity
 
 ## Comandos para Execução
 
@@ -183,6 +243,110 @@ from modules.tools import MongoDBTool
 tool = MongoDBTool()
 tool.show_connection_status()
 tool.list_collections()
+"
+### 🧪 Testes e Desenvolvimento - Módulo de Tarefas
+```bash
+# Testar apenas o módulo de tarefas
+python modules/tasks.py
+
+# Testar cliente Todoist básico
+python -c "
+from utils.todoist_client import TodoistClient
+from utils.config import Config
+client = TodoistClient(Config.TODOIST_API_TOKEN)
+projects = client.get_projects()
+print(f'Projetos: {len(projects)}')
+for p in projects[:3]:
+    print(f'  - {p.name}')
+"
+
+# Testar criação de tarefa
+python -c "
+from utils.todoist_client import TodoistClient
+from utils.config import Config
+client = TodoistClient(Config.TODOIST_API_TOKEN)
+task = client.create_task('Teste via API', priority=3)
+if task:
+    print(f'Tarefa criada: {task.content} (ID: {task.id})')
+    client.complete_task(task.id)
+    print('Tarefa marcada como concluída')
+"
+
+# Testar funcionalidades do módulo de tarefas
+python -c "
+from modules.tasks import TasksModule
+module = TasksModule()
+if module.client:
+    tasks = module.client.get_tasks()
+    projects = module.client.get_projects()
+    labels = module.client.get_labels()
+    print(f'Status: {len(tasks)} tarefas, {len(projects)} projetos, {len(labels)} etiquetas')
+"
+
+# Testar configuração do Todoist
+python -c "
+from utils.config import Config
+token = Config.TODOIST_API_TOKEN
+print(f'Token configurado: {\"Sim\" if token else \"Não\"}')
+if token:
+    print(f'Token: {token[:10]}...{token[-4:]}')
+"
+```
+
+## 🔧 Configuração do Módulo de Tarefas
+
+### Obter Token da API Todoist
+1. **Acesse**: [Todoist Settings > Integrations](https://todoist.com/prefs/integrations)
+2. **Copie o API Token**
+3. **Configure no .env**:
+```bash
+TODOIST_API_TOKEN=your_token_here
+```
+
+### Recursos Disponíveis
+
+#### 📝 Gerenciamento de Tarefas
+- **CRUD Completo**: Create, Read, Update, Delete
+- **Prioridades**: 4 níveis (Baixa → Urgente)
+- **Datas**: Linguagem natural ("hoje", "amanhã", "próxima sexta")
+- **Etiquetas**: Múltiplas etiquetas por tarefa
+- **Projetos**: Organização hierárquica
+- **Descrições**: Texto livre para detalhes
+
+#### 📁 Gerenciamento de Projetos
+- **Criação/Edição**: Nomes, cores, favoritos
+- **Estatísticas**: Análise de tarefas por projeto
+- **Organização**: Hierarquia de projetos
+- **Cores Personalizadas**: 20 opções de cores
+
+#### 🏷️ Sistema de Etiquetas
+- **Criação Dinâmica**: Novas etiquetas conforme necessário
+- **Cores**: Personalização visual
+- **Atribuição**: Múltiplas etiquetas por tarefa
+- **Filtros**: Busca por etiquetas específicas
+
+#### 📊 Dashboard e Analytics
+- **Visão Geral**: Distribuição de tarefas por status
+- **Métricas**: Produtividade e conclusões
+- **Gráficos**: Representação visual de dados
+- **Tendências**: Análise temporal
+
+#### 🔍 Busca e Filtros
+- **Busca Textual**: Conteúdo, descrição, etiquetas
+- **Filtros**: Projeto, prioridade, data
+- **Histórico**: Tarefas concluídas por período
+- **Exportação**: Dados em formato JSON
+
+### Comandos de Uso Direto
+```bash
+# Acesso rápido ao módulo de tarefas
+python main.py  # Depois selecionar opção 4
+
+# Teste de conectividade
+python -c "
+from modules.tasks import TasksModule
+app = TasksModule()
+print('Módulo de tarefas:', 'OK' if app.client else 'Token não configurado')
 "
 ```
 
@@ -346,6 +510,9 @@ MONGODB_PASSWORD=lifeos_app_password
 # Configurações da aplicação
 NEWS_UPDATE_INTERVAL_HOURS=6
 MAX_ARTICLES_PER_SOURCE=50
+
+# Integração Todoist
+TODOIST_API_TOKEN=your_todoist_api_token_here
 ```
 
 ### 🔄 Sistema de Fallback
