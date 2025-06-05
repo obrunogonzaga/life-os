@@ -1,20 +1,20 @@
 {
   "TabNews": {
-    "timestamp": "2025-06-05T11:38:08.200942",
+    "timestamp": "2025-06-05T12:18:10.920298",
     "articles": [
       {
         "titulo": "Criar apps sem saber programar é picaretagem?",
         "link": "https://www.tabnews.com.br/jubs1/criar-apps-sem-saber-programar-e-picaretagem",
         "comentarios": 7,
         "autor": "jubs1",
-        "tempo_postagem": "14 horas atrás",
+        "tempo_postagem": "15 horas atrás",
         "origem": "TabNews",
         "tags": null
       },
       {
         "titulo": "Build in public é realmente isso tudo?",
         "link": "https://www.tabnews.com.br/renanrbrs/build-in-public-e-realmente-isso-tudo",
-        "comentarios": 7,
+        "comentarios": 8,
         "autor": "renanrbrs",
         "tempo_postagem": "18 horas atrás",
         "origem": "TabNews",
@@ -25,7 +25,7 @@
         "link": "https://www.tabnews.com.br/VictorBDev/pitch-criei-uma-ferramenta-que-te-notifica-e-gera-ideias-sobre-dores-nos-seus-nichos-favoritos",
         "comentarios": 4,
         "autor": "VictorBDev",
-        "tempo_postagem": "20 horas atrás",
+        "tempo_postagem": "21 horas atrás",
         "origem": "TabNews",
         "tags": null
       },
@@ -34,7 +34,7 @@
         "link": "https://www.tabnews.com.br/Guiflayrom/minha-proposta-para-estudantes-de-livros",
         "comentarios": 2,
         "autor": "Guiflayrom",
-        "tempo_postagem": "23 horas atrás",
+        "tempo_postagem": "24 horas atrás",
         "origem": "TabNews",
         "tags": null
       },
@@ -43,7 +43,16 @@
         "link": "https://www.tabnews.com.br/kaioodutra/qual-o-melhor-tipo-de-id-para-seu-sistema-auto-increment-uuidv4-uuidv7-ou-ulid",
         "comentarios": 1,
         "autor": "kaioodutra",
-        "tempo_postagem": "6 horas atrás",
+        "tempo_postagem": "7 horas atrás",
+        "origem": "TabNews",
+        "tags": null
+      },
+      {
+        "titulo": "[Portifolio] Desenvolvi meu portifolio baseado em um jogo rpg estilo Stardew Valley",
+        "link": "https://www.tabnews.com.br/CristRodsz/portifolio-desenvolvi-meu-portifolio-baseado-em-um-jogo-rpg-estilo-stardew-valley",
+        "comentarios": 4,
+        "autor": "CristRodsz",
+        "tempo_postagem": "14 horas atrás",
         "origem": "TabNews",
         "tags": null
       },
@@ -57,29 +66,11 @@
         "tags": null
       },
       {
-        "titulo": "[Portifolio] Desenvolvi meu portifolio baseado em um jogo rpg estilo Stardew Valley",
-        "link": "https://www.tabnews.com.br/CristRodsz/portifolio-desenvolvi-meu-portifolio-baseado-em-um-jogo-rpg-estilo-stardew-valley",
-        "comentarios": 3,
-        "autor": "CristRodsz",
-        "tempo_postagem": "13 horas atrás",
-        "origem": "TabNews",
-        "tags": null
-      },
-      {
-        "titulo": "Ownership em Rust de forma descomplicada",
-        "link": "https://www.tabnews.com.br/BugBug2/ownership-em-rust-de-forma-descomplicada",
-        "comentarios": 1,
-        "autor": "BugBug2",
-        "tempo_postagem": "24 horas atrás",
-        "origem": "TabNews",
-        "tags": null
-      },
-      {
         "titulo": "Me ajudem a moldar mentes jovens",
         "link": "https://www.tabnews.com.br/fipa/me-ajudem-a-moldar-mentes-jovens",
         "comentarios": 1,
         "autor": "fipa",
-        "tempo_postagem": "20 horas atrás",
+        "tempo_postagem": "21 horas atrás",
         "origem": "TabNews",
         "tags": null
       },
@@ -88,7 +79,7 @@
         "link": "https://www.tabnews.com.br/alone/de-dev-para-founder-o-maior-bug-nao-e-no-codigo-e-na-conversa",
         "comentarios": 1,
         "autor": "alone",
-        "tempo_postagem": "15 horas atrás",
+        "tempo_postagem": "16 horas atrás",
         "origem": "TabNews",
         "tags": null
       },
@@ -97,7 +88,7 @@
         "link": "https://www.tabnews.com.br/NewsletterOficial/volvo-apresenta-primeiro-cinto-de-seguranca-automotivo-multiadaptavel-do-mundo",
         "comentarios": 0,
         "autor": "NewsletterOficial",
-        "tempo_postagem": "2 horas atrás",
+        "tempo_postagem": "3 horas atrás",
         "origem": "TabNews",
         "tags": null
       },
@@ -106,7 +97,16 @@
         "link": "https://www.tabnews.com.br/diogom/dores-nas-maos-ou-repeticao-excessiva-de-tarefas-isso-te-afeta",
         "comentarios": 1,
         "autor": "diogom",
-        "tempo_postagem": "2 horas atrás",
+        "tempo_postagem": "3 horas atrás",
+        "origem": "TabNews",
+        "tags": null
+      },
+      {
+        "titulo": "Novidades da Semana no Granulay",
+        "link": "https://www.tabnews.com.br/gpaiva/novidades-da-semana-no-granulay",
+        "comentarios": 0,
+        "autor": "gpaiva",
+        "tempo_postagem": "36 minutos atrás",
         "origem": "TabNews",
         "tags": null
       },
@@ -115,7 +115,7 @@
         "link": "https://www.tabnews.com.br/vitorhideki/como-transformei-a-inveja-e-a-tristeza-em-um-produto-muito-bonito",
         "comentarios": 0,
         "autor": "vitorhideki",
-        "tempo_postagem": "10 minutos atrás",
+        "tempo_postagem": "50 minutos atrás",
         "origem": "TabNews",
         "tags": null
       },
@@ -125,6 +125,15 @@
         "comentarios": 0,
         "autor": "MatheusNascimento",
         "tempo_postagem": "3 horas atrás",
+        "origem": "TabNews",
+        "tags": null
+      },
+      {
+        "titulo": "Ownership em Rust de forma descomplicada",
+        "link": "https://www.tabnews.com.br/BugBug2/ownership-em-rust-de-forma-descomplicada",
+        "comentarios": 1,
+        "autor": "BugBug2",
+        "tempo_postagem": "1 dia atrás",
         "origem": "TabNews",
         "tags": null
       },
@@ -260,15 +269,6 @@
         "comentarios": 1,
         "autor": "fibonatto",
         "tempo_postagem": "7 dias atrás",
-        "origem": "TabNews",
-        "tags": null
-      },
-      {
-        "titulo": "Como push notifications funcionam?",
-        "link": "https://www.tabnews.com.br/pdrzan/como-push-notifications-funcionam",
-        "comentarios": 2,
-        "autor": "pdrzan",
-        "tempo_postagem": "3 dias atrás",
         "origem": "TabNews",
         "tags": null
       }

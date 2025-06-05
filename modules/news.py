@@ -8,9 +8,13 @@ from rich.table import Table
 from rich.panel import Panel
 from rich.prompt import Prompt, IntPrompt
 from rich import box
+
+# Adicionar o diretório pai ao path para importações
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from utils.config_manager import ConfigManager
 from utils.news_aggregator import NewsAggregator
-from scrapers.tabnews_scraper import Artigo
+from scrapers.tabnews_scraper import Artigo, ArtigoDetalhado, Comentario, TabNewsScraper
 
 
 console = Console()
@@ -117,6 +121,13 @@ class WidiaNews:
                 current_page = total_pages - 1
             elif choice in ['i', 'inicio']:
                 current_page = 0
+            elif choice.isdigit():
+                # Usuário digitou um número - quer ver o artigo
+                article_num = int(choice)
+                start_idx = current_page * per_page
+                if 1 <= article_num <= len(articles):
+                    selected_article = articles[article_num - 1]
+                    self.show_article_detail(selected_article)
     
     def show_navigation_controls(self, current_page, total_pages):
         table = Table(show_header=False, box=box.ROUNDED, padding=(0, 1))
@@ -132,10 +143,184 @@ class WidiaNews:
             table.add_row("P / >", "▶️  Próxima página")
             table.add_row("F", "⏭️  Última página")
         
+        table.add_row("1-N", "📖 Ver artigo (digite o número)")
         table.add_row("S / 0", "❌ Sair")
         
         console.print("\n[bold]Navegação:[/bold]")
         console.print(table)
+    
+    def show_article_detail(self, artigo: Artigo):
+        """
+        Mostra os detalhes completos de um artigo
+        """
+        self.clear_screen()
+        self.show_header()
+        
+        console.print(f"[bold yellow]📖 Carregando artigo...[/bold yellow]")
+        console.print(f"[dim]{artigo.titulo}[/dim]\n")
+        
+        # Usar o scraper para obter detalhes completos
+        scraper = TabNewsScraper()
+        artigo_detalhado = scraper.scrape_artigo_detalhado(artigo.link)
+        
+        if not artigo_detalhado:
+            console.print("[red]❌ Erro ao carregar o artigo![/red]")
+            console.print("[dim]Pressione Enter para voltar...[/dim]")
+            input()
+            return
+        
+        # Exibir detalhes do artigo
+        self._display_article_content(artigo_detalhado)
+    
+    def _display_article_content(self, artigo: ArtigoDetalhado):
+        """
+        Exibe o conteúdo detalhado do artigo com navegação
+        """
+        while True:
+            self.clear_screen()
+            self.show_header()
+            
+            # Cabeçalho do artigo
+            header_content = f"[bold]{artigo.titulo}[/bold]\n"
+            header_content += f"[dim]Por {artigo.autor} • {artigo.tempo_postagem} • {artigo.origem}[/dim]"
+            
+            console.print(Panel(
+                header_content,
+                border_style="blue",
+                padding=(1, 2)
+            ))
+            
+            # Menu de opções
+            table = Table(show_header=False, box=box.ROUNDED)
+            table.add_column("Opção", style="cyan", width=8)
+            table.add_column("Ação", style="white")
+            
+            table.add_row("1", "📄 Ver conteúdo")
+            table.add_row("2", f"💬 Ver comentários ({len(artigo.comentarios)})")
+            table.add_row("3", "🔗 Copiar link")
+            table.add_row("0", "⬅️  Voltar")
+            
+            console.print(table)
+            
+            choice = Prompt.ask("\nEscolha uma opção", default="1")
+            
+            if choice == "1":
+                self._show_article_content(artigo)
+            elif choice == "2":
+                self._show_article_comments(artigo)
+            elif choice == "3":
+                console.print(f"\n[green]📋 Link copiado:[/green]")
+                console.print(f"[dim]{artigo.link}[/dim]")
+                console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+                input()
+            elif choice == "0":
+                break
+            else:
+                console.print("\n[red]Opção inválida![/red]")
+                console.print("[dim]Pressione Enter para continuar...[/dim]")
+                input()
+    
+    def _show_article_content(self, artigo: ArtigoDetalhado):
+        """
+        Mostra o conteúdo do artigo em formato paginado
+        """
+        self.clear_screen()
+        self.show_header()
+        
+        # Cabeçalho
+        console.print(Panel(
+            f"[bold]{artigo.titulo}[/bold]\n"
+            f"[dim]Por {artigo.autor} • {artigo.tempo_postagem}[/dim]",
+            border_style="blue",
+            title="📄 Conteúdo do Artigo"
+        ))
+        
+        # Dividir conteúdo em linhas para paginação
+        content_lines = artigo.conteudo_markdown.split('\n')
+        lines_per_page = 20
+        total_pages = (len(content_lines) + lines_per_page - 1) // lines_per_page
+        current_page = 0
+        
+        while True:
+            # Mostrar página atual
+            start_idx = current_page * lines_per_page
+            end_idx = min(start_idx + lines_per_page, len(content_lines))
+            
+            console.print(f"\n[dim]Página {current_page + 1} de {total_pages}[/dim]")
+            console.print("─" * 60)
+            
+            for line in content_lines[start_idx:end_idx]:
+                console.print(line)
+            
+            console.print("─" * 60)
+            
+            # Controles de navegação
+            controls = []
+            if current_page > 0:
+                controls.append("A = Anterior")
+            if current_page < total_pages - 1:
+                controls.append("P = Próxima")
+            controls.append("S = Sair")
+            
+            console.print(f"[dim]{' | '.join(controls)}[/dim]")
+            
+            choice = Prompt.ask("\nNavegação", default="s").lower()
+            
+            if choice in ['s', 'sair']:
+                break
+            elif choice in ['p', 'proximo'] and current_page < total_pages - 1:
+                current_page += 1
+                self.clear_screen()
+                self.show_header()
+                console.print(Panel(
+                    f"[bold]{artigo.titulo}[/bold]\n"
+                    f"[dim]Por {artigo.autor} • {artigo.tempo_postagem}[/dim]",
+                    border_style="blue",
+                    title="📄 Conteúdo do Artigo"
+                ))
+            elif choice in ['a', 'anterior'] and current_page > 0:
+                current_page -= 1
+                self.clear_screen()
+                self.show_header()
+                console.print(Panel(
+                    f"[bold]{artigo.titulo}[/bold]\n"
+                    f"[dim]Por {artigo.autor} • {artigo.tempo_postagem}[/dim]",
+                    border_style="blue",
+                    title="📄 Conteúdo do Artigo"
+                ))
+    
+    def _show_article_comments(self, artigo: ArtigoDetalhado):
+        """
+        Mostra os comentários do artigo
+        """
+        self.clear_screen()
+        self.show_header()
+        
+        console.print(Panel(
+            f"[bold]{artigo.titulo}[/bold]\n"
+            f"[dim]Por {artigo.autor} • {artigo.tempo_postagem}[/dim]",
+            border_style="blue",
+            title=f"💬 Comentários ({len(artigo.comentarios)})"
+        ))
+        
+        if not artigo.comentarios:
+            console.print("\n[dim]Nenhum comentário encontrado.[/dim]")
+        else:
+            for i, comentario in enumerate(artigo.comentarios, 1):
+                comment_content = f"[bold]{comentario.autor}[/bold]"
+                if comentario.tempo_postagem:
+                    comment_content += f" [dim]• {comentario.tempo_postagem}[/dim]"
+                comment_content += f"\n\n{comentario.conteudo}"
+                
+                console.print(Panel(
+                    comment_content,
+                    title=f"Comentário {i}",
+                    border_style="green",
+                    padding=(1, 2)
+                ))
+        
+        console.print("\n[dim]Pressione Enter para voltar...[/dim]")
+        input()
     
     def add_site(self):
         self.clear_screen()
