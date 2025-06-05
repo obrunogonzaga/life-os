@@ -11,6 +11,7 @@ from datetime import datetime
 # Importar módulos do Life OS
 from modules.news import WidiaNews
 from modules.tools import ToolsModule
+from modules.tasks import TasksModule
 
 
 console = Console()
@@ -44,7 +45,7 @@ class LifeOS:
         table.add_row("1", "📰 Notícias", "Últimas notícias de tecnologia")
         table.add_row("2", "🔧 Ferramentas", "Utilitários e gerenciamento")
         table.add_row("3", "📅 Agenda", "[dim italic]Em breve[/dim italic]")
-        table.add_row("4", "✅ Tarefas", "[dim italic]Em breve[/dim italic]")
+        table.add_row("4", "✅ Tarefas", "Gerenciamento com Todoist")
         table.add_row("5", "💰 Finanças", "[dim italic]Em breve[/dim italic]")
         table.add_row("6", "📝 Notas", "[dim italic]Em breve[/dim italic]")
         table.add_row("7", "🎯 Hábitos", "[dim italic]Em breve[/dim italic]")
@@ -62,6 +63,11 @@ class LifeOS:
         """Lança o módulo de ferramentas"""
         tools_app = ToolsModule()
         tools_app.run()
+    
+    def launch_tasks_module(self):
+        """Lança o módulo de tarefas"""
+        tasks_app = TasksModule()
+        tasks_app.run()
     
     def coming_soon(self, module_name):
         """Exibe mensagem de módulo em desenvolvimento"""
@@ -93,7 +99,7 @@ class LifeOS:
             elif choice == "3":
                 self.coming_soon("Agenda")
             elif choice == "4":
-                self.coming_soon("Tarefas")
+                self.launch_tasks_module()
             elif choice == "5":
                 self.coming_soon("Finanças")
             elif choice == "6":
