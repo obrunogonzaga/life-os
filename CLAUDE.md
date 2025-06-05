@@ -27,7 +27,8 @@ python main.py
 3. **View Latest News**: Select option `1` (📰 Últimas notícias)
 4. **Read an Article**: Type any article number to view full content
 5. **Navigate Efficiently**: Use `M` to return to main menu from any submenu
-6. **Explore Features**: Try options 2-6 for management and statistics
+6. **Explore Tools**: Try option `2` (🔧 Ferramentas) to manage MongoDB and system utilities
+7. **Explore Features**: Try other options for management and statistics
 
 ## Project Structure
 ```
@@ -35,7 +36,8 @@ life-os/
 ├── main.py                    # Menu principal do Life OS
 ├── modules/                   # Módulos funcionais do sistema
 │   ├── __init__.py
-│   └── news.py               # Módulo de notícias com interface completa
+│   ├── news.py               # Módulo de notícias com interface completa
+│   └── tools.py              # Módulo de ferramentas e gerenciamento MongoDB
 ├── scrapers/                 # Web scrapers para diferentes sites
 │   ├── __init__.py
 │   └── tabnews_scraper.py    # Scraper TabNews com extração de artigos detalhados
@@ -69,6 +71,14 @@ life-os/
 - **Interface Rica**: Navegação por páginas, seleção de artigos, retorno direto ao menu principal
 - **Cache Inteligente**: Armazenamento de artigos detalhados com limpeza automática
 - **Monitoramento**: Dashboard de status do banco e fontes de notícias
+
+### 🔧 Ferramentas (Implementado)
+- **Gerenciador MongoDB**: Interface completa para gerenciamento de banco de dados
+- **Status de Conexão**: Monitora conectividade local vs remoto com detalhes do servidor
+- **Explorador de Collections**: Lista, explora e analisa dados do MongoDB
+- **Busca Avançada**: Busca por texto em documentos com resultados formatados
+- **Análise de Dados**: Estatísticas de uso, tamanhos e últimas inserções
+- **Interface Intuitiva**: Navegação por menus com formatação rica no terminal
 
 ### 📅 Agenda (Em breve)
 - Gerenciamento de compromissos e eventos
@@ -143,6 +153,9 @@ python main.py
 # Testar apenas o módulo de notícias
 python modules/news.py
 
+# Testar apenas o módulo de ferramentas
+python modules/tools.py
+
 # Testar scraper básico
 python -c "from scrapers.tabnews_scraper import TabNewsScraper; print(TabNewsScraper().scrape_artigos())"
 
@@ -163,6 +176,14 @@ python -c "from utils.config import Config; Config.print_config()"
 
 # Testar conexão MongoDB (local ou remoto)
 python utils/test_connection.py "mongodb://user:pass@host:port/database"
+
+# Testar funcionalidades do gerenciador MongoDB
+python -c "
+from modules.tools import MongoDBTool
+tool = MongoDBTool()
+tool.show_connection_status()
+tool.list_collections()
+"
 ```
 
 ## Future Features
@@ -338,6 +359,77 @@ MAX_ARTICLES_PER_SOURCE=50
 - **Persistência**: MongoDB para produção, JSON para fallback
 - **Prevenção de Rate Limiting**: Evita requests excessivos aos sites de notícias
 - **Monitoramento**: Interface para visualizar status e estatísticas
+
+## 🔧 Usando o Módulo de Ferramentas
+
+### Acesso ao Gerenciador MongoDB
+```bash
+# 1. Executar Life OS
+python main.py
+
+# 2. Selecionar opção 2 (🔧 Ferramentas)
+# 3. Selecionar opção 1 (🗄️ Gerenciador MongoDB)
+```
+
+### Funcionalidades Disponíveis
+
+**📊 Status da Conexão (Opção 1)**
+- Verifica se MongoDB está conectado (local ou remoto)
+- Mostra host, porta, database e versão do MongoDB
+- Identifica automaticamente se está usando configuração local ou remota
+
+**📁 Listar Collections (Opção 2)**
+- Lista todas as collections do banco de dados
+- Mostra quantidade de documentos em cada collection
+- Exibe tamanho aproximado de cada collection
+
+**🔍 Detalhes de Collection (Opção 3)**
+- Estatísticas detalhadas de uma collection específica
+- Informações sobre índices e tamanhos
+- Exibe exemplos dos primeiros documentos
+- Mostra data do último documento inserido
+
+**🔎 Buscar Documentos (Opção 4)**
+- Busca por texto em campos como título, conteúdo, autor, link
+- Busca case-insensitive com regex
+- Limita resultados para evitar overload
+- Exibe resultados formatados com syntax highlighting
+
+**⏰ Documentos Recentes (Opção 5)**
+- Mostra os documentos mais recentemente inseridos
+- Útil para verificar atualizações do sistema
+- Ordenação por ObjectId (timestamp de criação)
+
+### Exemplos de Uso Direto
+```bash
+# Testar status de conexão
+python -c "
+from modules.tools import MongoDBTool
+tool = MongoDBTool()
+tool.show_connection_status()
+"
+
+# Listar todas as collections
+python -c "
+from modules.tools import MongoDBTool
+tool = MongoDBTool()
+tool.list_collections()
+"
+
+# Buscar artigos sobre 'API'
+python -c "
+from modules.tools import MongoDBTool
+tool = MongoDBTool()
+tool.search_documents('news_articles', 'API', 5)
+"
+
+# Ver documentos recentes
+python -c "
+from modules.tools import MongoDBTool
+tool = MongoDBTool()
+tool.recent_documents('news_articles', 3)
+"
+```
 
 ## Troubleshooting
 
