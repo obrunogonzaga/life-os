@@ -152,7 +152,7 @@ class WidiaNews:
     
     def show_article_detail(self, artigo: Artigo):
         """
-        Mostra os detalhes completos de um artigo
+        Mostra os detalhes completos de um artigo usando cache inteligente
         """
         self.clear_screen()
         self.show_header()
@@ -160,7 +160,42 @@ class WidiaNews:
         console.print(f"[bold yellow]📖 Carregando artigo...[/bold yellow]")
         console.print(f"[dim]{artigo.titulo}[/dim]\n")
         
-        # Usar o scraper para obter detalhes completos
+        # Verificar se deve atualizar detalhes (controle de 6 horas)
+        news_db = self.news_aggregator.news_db
+        should_update = news_db.should_update_article_details(artigo.link, hours_threshold=6)
+        
+        if not should_update:
+            # Tentar obter do cache primeiro
+            cached_details = news_db.get_article_details(artigo.link)
+            if cached_details:
+                console.print(f"[green]📦 Usando versão em cache[/green]")
+                
+                # Converter dados cached para ArtigoDetalhado
+                comentarios_objs = []
+                for comentario_dict in cached_details.get('comentarios', []):
+                    comentarios_objs.append(Comentario(
+                        autor=comentario_dict.get('autor', ''),
+                        conteudo=comentario_dict.get('conteudo', ''),
+                        tempo_postagem=comentario_dict.get('tempo_postagem', ''),
+                        respostas=[]
+                    ))
+                
+                artigo_detalhado = ArtigoDetalhado(
+                    titulo=cached_details.get('titulo', artigo.titulo),
+                    link=artigo.link,
+                    autor=artigo.autor,
+                    tempo_postagem=artigo.tempo_postagem,
+                    conteudo_markdown=cached_details.get('conteudo', ''),
+                    comentarios=comentarios_objs,
+                    origem=artigo.origem
+                )
+                
+                # Exibir detalhes do artigo
+                self._display_article_content(artigo_detalhado)
+                return
+        
+        # Buscar novos detalhes do site
+        console.print(f"[yellow]🔄 Buscando detalhes atualizados...[/yellow]")
         scraper = TabNewsScraper()
         artigo_detalhado = scraper.scrape_artigo_detalhado(artigo.link)
         
@@ -169,6 +204,25 @@ class WidiaNews:
             console.print("[dim]Pressione Enter para voltar...[/dim]")
             input()
             return
+        
+        # Salvar detalhes no cache/MongoDB
+        comentarios_dicts = []
+        for comentario in artigo_detalhado.comentarios:
+            comentarios_dicts.append({
+                'autor': comentario.autor,
+                'conteudo': comentario.conteudo,
+                'tempo_postagem': comentario.tempo_postagem
+            })
+        
+        success = news_db.save_article_details(
+            link=artigo.link,
+            titulo=artigo_detalhado.titulo,
+            conteudo=artigo_detalhado.conteudo_markdown,
+            comentarios=comentarios_dicts
+        )
+        
+        if success:
+            console.print(f"[green]💾 Detalhes salvos no cache[/green]")
         
         # Exibir detalhes do artigo
         self._display_article_content(artigo_detalhado)
@@ -485,9 +539,20 @@ class WidiaNews:
             else:
                 console.print("[dim]Nenhuma estatística disponível.[/dim]")
             
+            # Estatísticas de detalhes de artigos
+            article_details_stats = self.news_aggregator.news_db.get_article_details_stats()
+            
+            if article_details_stats.get('total_articles', 0) > 0:
+                console.print(f"\n[bold]Cache de Detalhes de Artigos:[/bold]")
+                console.print(f"• Total de artigos detalhados: {article_details_stats.get('total_articles', 0)}")
+                console.print(f"• Artigos recentes (7 dias): {article_details_stats.get('recent_articles', 0)}")
+                console.print(f"• Fonte: {article_details_stats.get('source', 'N/A')}")
+            
             # Informações adicionais
             console.print(f"\n[bold]Configurações:[/bold]")
-            console.print(f"• Intervalo de atualização: 6 horas")
+            console.print(f"• Intervalo de atualização (notícias): 6 horas")
+            console.print(f"• Intervalo de atualização (detalhes): 6 horas")
+            console.print(f"• Limpeza automática de detalhes: 5 dias")
             console.print(f"• Máximo de artigos por fonte: {self.config_manager.get_max_articles()}")
             console.print(f"• Sites ativos: {', '.join(self.config_manager.get_active_sites())}")
             

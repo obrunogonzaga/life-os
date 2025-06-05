@@ -207,6 +207,7 @@ class NewsDatabase:
         self.db_manager = db_manager
         self.collection_name = "news_articles"
         self.metadata_collection = "news_metadata"
+        self.details_collection = "article_details"
         
         # Criar índices se conectado
         if self.db_manager.is_connected():
@@ -231,6 +232,13 @@ class NewsDatabase:
         self.db_manager.create_index(self.metadata_collection, [
             ("origem", 1),
             ("ultimo_update", -1)
+        ])
+        
+        # Índices para detalhes de artigos
+        self.db_manager.create_index(self.details_collection, [
+            ("link", 1),  # Índice único por link
+            ("data_scraping", -1),  # Ordenar por data de scraping
+            ("ultimo_acesso", -1)  # Rastrear último acesso
         ])
     
     def should_update_news(self, origem: str, hours_threshold: int = None) -> bool:
@@ -416,3 +424,235 @@ class NewsDatabase:
             if "authentication" not in str(e).lower() and "unauthorized" not in str(e).lower():
                 print(f"❌ Erro ao obter estatísticas: {e}")
             return {}
+    
+    def should_update_article_details(self, link: str, hours_threshold: int = 6) -> bool:
+        """
+        Verifica se deve atualizar detalhes do artigo baseado no tempo desde a última atualização
+        
+        Args:
+            link: URL do artigo
+            hours_threshold: Número de horas para considerar necessário atualizar
+            
+        Returns:
+            bool: True se deve atualizar, False caso contrário
+        """
+        try:
+            if not self.db_manager.is_connected():
+                # Usar fallback JSON para verificação
+                fallback_data = self.db_manager.fallback_to_json('read', file_path="data/article_details_cache.json")
+                if link in fallback_data:
+                    last_update_str = fallback_data[link].get('ultimo_acesso')
+                    if last_update_str:
+                        last_update = datetime.fromisoformat(last_update_str)
+                        threshold_time = datetime.now() - timedelta(hours=hours_threshold)
+                        return last_update < threshold_time
+                return True  # Se não há dados, deve atualizar
+            
+            collection = self.db_manager.get_collection(self.details_collection)
+            article_details = collection.find_one({"link": link})
+            
+            if not article_details:
+                return True  # Primeira vez, deve atualizar
+            
+            last_access = article_details.get('ultimo_acesso')
+            if not last_access:
+                return True
+            
+            # Verificar se passou o tempo mínimo
+            threshold_time = datetime.now() - timedelta(hours=hours_threshold)
+            should_update = last_access < threshold_time
+            
+            if should_update:
+                print(f"⏰ Artigo acessado há mais de {hours_threshold}h. Atualizando...")
+            else:
+                time_diff = datetime.now() - last_access
+                hours_left = hours_threshold - (time_diff.total_seconds() / 3600)
+                print(f"⏳ Artigo em cache. Próxima atualização em {hours_left:.1f}h")
+            
+            return should_update
+            
+        except Exception as e:
+            if "authentication" not in str(e).lower() and "unauthorized" not in str(e).lower():
+                print(f"❌ Erro ao verificar necessidade de atualização do artigo: {e}")
+            return True  # Em caso de erro, melhor atualizar
+    
+    def save_article_details(self, link: str, titulo: str, conteudo: str, comentarios: List[Dict]) -> bool:
+        """
+        Salva detalhes completos do artigo no MongoDB
+        
+        Args:
+            link: URL do artigo
+            titulo: Título do artigo
+            conteudo: Conteúdo completo do artigo
+            comentarios: Lista de comentários
+            
+        Returns:
+            bool: True se salvou com sucesso, False caso contrário
+        """
+        try:
+            if not self.db_manager.is_connected():
+                # Usar fallback JSON
+                fallback_data = self.db_manager.fallback_to_json('read', file_path="data/article_details_cache.json")
+                fallback_data[link] = {
+                    "titulo": titulo,
+                    "conteudo": conteudo,
+                    "comentarios": comentarios,
+                    "ultimo_acesso": datetime.now().isoformat(),
+                    "data_scraping": datetime.now().isoformat()
+                }
+                return self.db_manager.fallback_to_json('write', fallback_data, file_path="data/article_details_cache.json")
+            
+            collection = self.db_manager.get_collection(self.details_collection)
+            
+            now = datetime.now()
+            article_data = {
+                "link": link,
+                "titulo": titulo,
+                "conteudo": conteudo,
+                "comentarios": comentarios,
+                "ultimo_acesso": now,
+                "data_scraping": now
+            }
+            
+            # Usar upsert para atualizar se já existe
+            result = collection.update_one(
+                {"link": link},
+                {"$set": article_data},
+                upsert=True
+            )
+            
+            if result.upserted_id or result.modified_count > 0:
+                print(f"✅ Detalhes do artigo salvos no MongoDB")
+                return True
+            else:
+                print(f"⚠️  Nenhuma alteração feita nos detalhes do artigo")
+                return True
+            
+        except Exception as e:
+            if "authentication" not in str(e).lower() and "unauthorized" not in str(e).lower():
+                print(f"❌ Erro ao salvar detalhes do artigo: {e}")
+            return False
+    
+    def get_article_details(self, link: str) -> Optional[Dict]:
+        """
+        Recupera detalhes completos do artigo do MongoDB
+        
+        Args:
+            link: URL do artigo
+            
+        Returns:
+            Dicionário com detalhes do artigo ou None se não encontrado
+        """
+        try:
+            if not self.db_manager.is_connected():
+                # Usar fallback JSON
+                fallback_data = self.db_manager.fallback_to_json('read', file_path="data/article_details_cache.json")
+                return fallback_data.get(link)
+            
+            collection = self.db_manager.get_collection(self.details_collection)
+            
+            article_details = collection.find_one({"link": link})
+            
+            if article_details:
+                # Remover campos internos do MongoDB
+                article_details.pop('_id', None)
+                return article_details
+            
+            return None
+            
+        except Exception as e:
+            if "authentication" not in str(e).lower() and "unauthorized" not in str(e).lower():
+                print(f"❌ Erro ao recuperar detalhes do artigo: {e}")
+            return None
+    
+    def cleanup_old_articles(self, days_threshold: int = 5) -> int:
+        """
+        Remove manualmente artigos mais antigos que o threshold (TTL automático deve cuidar disso)
+        
+        Args:
+            days_threshold: Número de dias para considerar artigo antigo
+            
+        Returns:
+            Número de artigos removidos
+        """
+        try:
+            if not self.db_manager.is_connected():
+                # Usar fallback JSON para limpeza manual
+                fallback_data = self.db_manager.fallback_to_json('read', file_path="data/article_details_cache.json")
+                removed_count = 0
+                threshold_date = datetime.now() - timedelta(days=days_threshold)
+                
+                keys_to_remove = []
+                for link, details in fallback_data.items():
+                    data_scraping_str = details.get('data_scraping')
+                    if data_scraping_str:
+                        data_scraping = datetime.fromisoformat(data_scraping_str)
+                        if data_scraping < threshold_date:
+                            keys_to_remove.append(link)
+                
+                for key in keys_to_remove:
+                    del fallback_data[key]
+                    removed_count += 1
+                
+                if removed_count > 0:
+                    self.db_manager.fallback_to_json('write', fallback_data, file_path="data/article_details_cache.json")
+                    print(f"🧹 {removed_count} artigos antigos removidos do cache JSON")
+                
+                return removed_count
+            
+            collection = self.db_manager.get_collection(self.details_collection)
+            
+            # Calcular data limite
+            threshold_date = datetime.now() - timedelta(days=days_threshold)
+            
+            # Remover artigos antigos
+            result = collection.delete_many({
+                "data_scraping": {"$lt": threshold_date}
+            })
+            
+            if result.deleted_count > 0:
+                print(f"🧹 {result.deleted_count} artigos antigos removidos do MongoDB")
+            
+            return result.deleted_count
+            
+        except Exception as e:
+            if "authentication" not in str(e).lower() and "unauthorized" not in str(e).lower():
+                print(f"❌ Erro ao limpar artigos antigos: {e}")
+            return 0
+    
+    def get_article_details_stats(self) -> Dict[str, int]:
+        """
+        Retorna estatísticas da coleção de detalhes de artigos
+        
+        Returns:
+            Dicionário com estatísticas
+        """
+        try:
+            if not self.db_manager.is_connected():
+                # Usar fallback JSON para estatísticas
+                fallback_data = self.db_manager.fallback_to_json('read', file_path="data/article_details_cache.json")
+                return {
+                    'total_articles': len(fallback_data),
+                    'source': 'JSON fallback'
+                }
+            
+            collection = self.db_manager.get_collection(self.details_collection)
+            
+            total_count = collection.count_documents({})
+            
+            # Contar artigos dos últimos 7 dias
+            week_ago = datetime.now() - timedelta(days=7)
+            recent_count = collection.count_documents({
+                "data_scraping": {"$gte": week_ago}
+            })
+            
+            return {
+                'total_articles': total_count,
+                'recent_articles': recent_count,
+                'source': 'MongoDB'
+            }
+            
+        except Exception as e:
+            if "authentication" not in str(e).lower() and "unauthorized" not in str(e).lower():
+                print(f"❌ Erro ao obter estatísticas de detalhes: {e}")
+            return {'total_articles': 0, 'recent_articles': 0, 'source': 'error'}
