@@ -10,6 +10,7 @@ from datetime import datetime
 
 # Importar módulos do Life OS
 from modules.news import WidiaNews
+from modules.tools import ToolsModule
 
 
 console = Console()
@@ -41,11 +42,12 @@ class LifeOS:
         table.add_column("Descrição", style="dim")
         
         table.add_row("1", "📰 Notícias", "Últimas notícias de tecnologia")
-        table.add_row("2", "📅 Agenda", "[dim italic]Em breve[/dim italic]")
-        table.add_row("3", "✅ Tarefas", "[dim italic]Em breve[/dim italic]")
-        table.add_row("4", "💰 Finanças", "[dim italic]Em breve[/dim italic]")
-        table.add_row("5", "📝 Notas", "[dim italic]Em breve[/dim italic]")
-        table.add_row("6", "🎯 Hábitos", "[dim italic]Em breve[/dim italic]")
+        table.add_row("2", "🔧 Ferramentas", "Utilitários e gerenciamento")
+        table.add_row("3", "📅 Agenda", "[dim italic]Em breve[/dim italic]")
+        table.add_row("4", "✅ Tarefas", "[dim italic]Em breve[/dim italic]")
+        table.add_row("5", "💰 Finanças", "[dim italic]Em breve[/dim italic]")
+        table.add_row("6", "📝 Notas", "[dim italic]Em breve[/dim italic]")
+        table.add_row("7", "🎯 Hábitos", "[dim italic]Em breve[/dim italic]")
         table.add_row("0", "❌ Sair", "Encerrar o sistema")
         
         console.print(table)
@@ -55,6 +57,11 @@ class LifeOS:
         """Lança o módulo de notícias"""
         news_app = WidiaNews()
         news_app.run()
+    
+    def launch_tools_module(self):
+        """Lança o módulo de ferramentas"""
+        tools_app = ToolsModule()
+        tools_app.run()
     
     def coming_soon(self, module_name):
         """Exibe mensagem de módulo em desenvolvimento"""
@@ -82,14 +89,16 @@ class LifeOS:
             if choice == "1":
                 self.launch_news_module()
             elif choice == "2":
-                self.coming_soon("Agenda")
+                self.launch_tools_module()
             elif choice == "3":
-                self.coming_soon("Tarefas")
+                self.coming_soon("Agenda")
             elif choice == "4":
-                self.coming_soon("Finanças")
+                self.coming_soon("Tarefas")
             elif choice == "5":
-                self.coming_soon("Notas")
+                self.coming_soon("Finanças")
             elif choice == "6":
+                self.coming_soon("Notas")
+            elif choice == "7":
                 self.coming_soon("Hábitos")
             elif choice == "0":
                 self.running = False

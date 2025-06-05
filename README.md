@@ -32,6 +32,13 @@ python main.py
 - 🎛️ **Interface Rica**: Navegação interativa com atalho 'M' para menu principal
 - ⚡ **Performance**: Cache inteligente com atualizações de 6h e limpeza automática
 - 🎯 **Extração Avançada**: 89% de taxa de extração de comentários sem duplicatas
+
+### 🔧 **Módulo de Ferramentas** (Implementado)
+- 🗄️ **Gerenciador MongoDB**: Interface completa para gerenciamento de banco de dados
+- 📊 **Status de Conexão**: Monitora conectividade local vs remoto com detalhes do servidor
+- 📁 **Explorador de Collections**: Lista e analisa todas as collections do MongoDB
+- 🔍 **Busca Avançada**: Busca por texto em documentos com regex case-insensitive
+- ⏰ **Documentos Recentes**: Visualiza últimas inserções com formatação rica
 - 🧪 **Ferramentas Diagnóstico**: Utilitário completo para testar conexões MongoDB
 
 ### 🔮 **Módulos Futuros**
@@ -56,6 +63,15 @@ graph TB
         DETAIL[Article Detail View]
         COMMENTS[Comments View]
         STATS[Statistics Dashboard]
+    end
+    
+    subgraph "🔧 Tools Module"
+        TOOLS[Tools Menu]
+        MONGO[MongoDB Manager]
+        STATUS[Connection Status]
+        COLLECTIONS[Collections Explorer]
+        SEARCH[Document Search]
+        RECENT[Recent Documents]
     end
     
     subgraph "🔄 Data Processing"
@@ -83,10 +99,16 @@ graph TB
     %% User Flow
     UI --> MAIN
     MAIN --> NEWS
+    MAIN --> TOOLS
     NEWS --> PAGINATE
     PAGINATE --> DETAIL
     DETAIL --> COMMENTS
     NEWS --> STATS
+    TOOLS --> MONGO
+    MONGO --> STATUS
+    MONGO --> COLLECTIONS
+    MONGO --> SEARCH
+    MONGO --> RECENT
     
     %% Data Flow
     AGG --> SCRAPER
@@ -116,7 +138,7 @@ graph TB
     classDef external fill:#ffebee
     
     class UI,MAIN interface
-    class NEWS,PAGINATE,DETAIL,COMMENTS,STATS module
+    class NEWS,PAGINATE,DETAIL,COMMENTS,STATS,TOOLS,MONGO,STATUS,COLLECTIONS,SEARCH,RECENT module
     class AGG,SCRAPER,RATE,MONGO,JSON,CONFIG data
     class DOCKER,MONGOEX,ENV infra
     class TABNEWS external
@@ -270,14 +292,17 @@ python main.py
 ## 📖 Usage Guide
 
 ### Basic Navigation
-1. **Main Menu**: Choose module (currently only News available)
+1. **Main Menu**: Choose module (News, Tools, or Future Modules)
 2. **News Module**: 
    - `1` - View latest articles (with instant cache loading)
    - `2-5` - Manage sources and settings
    - `6` - View database statistics (local/remote) with cache metrics
    - `M` - Return to main menu from any submenu
-3. **Article List**: Type article number to read full content instantly
-4. **Article View**: Switch between content and comments with enhanced navigation
+3. **Tools Module**: 
+   - `1` - MongoDB Manager with 5 powerful features
+   - `M` - Return to main menu
+4. **Article List**: Type article number to read full content instantly
+5. **Article View**: Switch between content and comments with enhanced navigation
 
 ### Database Configuration
 ```bash
@@ -295,6 +320,14 @@ python utils/test_connection.py "mongodb://connection-string"
 - **Force Update**: Option 5 in News Menu
 - **Statistics**: Option 6 shows MongoDB status and update times
 - **Source Management**: Add/remove news sources dynamically
+- **MongoDB Tools**: Complete database management via Tools Module
+
+### MongoDB Management (Tools Module)
+1. **Connection Status** - View local/remote MongoDB details and server version
+2. **Collections Explorer** - List all collections with document counts and sizes  
+3. **Collection Details** - Deep dive into specific collections with statistics
+4. **Document Search** - Search articles by text with regex support
+5. **Recent Documents** - View latest insertions and updates
 
 ## 🔧 Configuration
 
@@ -442,7 +475,7 @@ python main.py
 
 ## 🔮 Roadmap
 
-### Phase 1: News Enhancement ✅
+### Phase 1: Core Infrastructure ✅
 - [x] MongoDB integration with Docker and TTL indexes
 - [x] **Remote MongoDB support** with Coolify/Hostinger integration
 - [x] **Dual database mode** (local/remote) with automatic fallback
@@ -453,6 +486,7 @@ python main.py
 - [x] Article details caching system with 6-hour updates
 - [x] Enhanced comment extraction with duplicate filtering
 - [x] **MongoDB connection testing utility** for diagnostics
+- [x] **Tools Module with MongoDB Manager** - Complete database management interface
 
 ### Phase 2: Multi-Source News 🚧
 - [ ] Dev.to scraper
@@ -488,12 +522,16 @@ pip install -r requirements.txt
 
 # Run tests
 python -c "from scrapers.tabnews_scraper import TabNewsScraper; print('✅ Scraper OK')"
+python -c "from modules.tools import MongoDBTool; print('✅ Tools Module OK')"
 
 # Check system configuration
 python -c "from utils.config import Config; Config.print_config()"
 
 # Test MongoDB connection (local or remote)
 python utils/test_connection.py "mongodb://connection-string"
+
+# Test Tools Module features
+python modules/tools.py
 
 # Switch database modes for testing
 # Edit DATABASE_MODE in .env file
