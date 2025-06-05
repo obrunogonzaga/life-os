@@ -1,0 +1,10 @@
+{
+  "active_sites": [
+    "TabNews"
+  ],
+  "available_sites": [
+    "TabNews"
+  ],
+  "cache_duration": 300,
+  "max_articles": 50
+}

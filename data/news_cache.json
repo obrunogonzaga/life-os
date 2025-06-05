@@ -1,0 +1,277 @@
+{
+  "TabNews": {
+    "timestamp": "2025-06-05T10:48:57.546672",
+    "articles": [
+      {
+        "titulo": "Criar apps sem saber programar é picaretagem?",
+        "link": "https://www.tabnews.com.br/jubs1/criar-apps-sem-saber-programar-e-picaretagem",
+        "comentarios": 5,
+        "autor": "jubs1",
+        "tempo_postagem": "13 horas atrás",
+        "origem": "TabNews",
+        "tags": null
+      },
+      {
+        "titulo": "[PITCH] - Criei uma ferramenta que te notifica e gera ideias sobre dores nos seus nichos favoritos!",
+        "link": "https://www.tabnews.com.br/VictorBDev/pitch-criei-uma-ferramenta-que-te-notifica-e-gera-ideias-sobre-dores-nos-seus-nichos-favoritos",
+        "comentarios": 4,
+        "autor": "VictorBDev",
+        "tempo_postagem": "19 horas atrás",
+        "origem": "TabNews",
+        "tags": null
+      },
+      {
+        "titulo": "Build in public é realmente isso tudo?",
+        "link": "https://www.tabnews.com.br/renanrbrs/build-in-public-e-realmente-isso-tudo",
+        "comentarios": 5,
+        "autor": "renanrbrs",
+        "tempo_postagem": "17 horas atrás",
+        "origem": "TabNews",
+        "tags": null
+      },
+      {
+        "titulo": "Minha proposta para estudantes de livros",
+        "link": "https://www.tabnews.com.br/Guiflayrom/minha-proposta-para-estudantes-de-livros",
+        "comentarios": 2,
+        "autor": "Guiflayrom",
+        "tempo_postagem": "22 horas atrás",
+        "origem": "TabNews",
+        "tags": null
+      },
+      {
+        "titulo": "Qual o melhor tipo de ID para seu sistema? AUTO_INCREMENT, UUIDv4, UUIDv7 ou ULID?",
+        "link": "https://www.tabnews.com.br/kaioodutra/qual-o-melhor-tipo-de-id-para-seu-sistema-auto-increment-uuidv4-uuidv7-ou-ulid",
+        "comentarios": 1,
+        "autor": "kaioodutra",
+        "tempo_postagem": "5 horas atrás",
+        "origem": "TabNews",
+        "tags": null
+      },
+      {
+        "titulo": "Bolha DEV",
+        "link": "https://www.tabnews.com.br/DevPHP/bolha-dev",
+        "comentarios": 20,
+        "autor": "DevPHP",
+        "tempo_postagem": "1 dia atrás",
+        "origem": "TabNews",
+        "tags": null
+      },
+      {
+        "titulo": "Ownership em Rust de forma descomplicada",
+        "link": "https://www.tabnews.com.br/BugBug2/ownership-em-rust-de-forma-descomplicada",
+        "comentarios": 1,
+        "autor": "BugBug2",
+        "tempo_postagem": "23 horas atrás",
+        "origem": "TabNews",
+        "tags": null
+      },
+      {
+        "titulo": "Me ajudem a moldar mentes jovens",
+        "link": "https://www.tabnews.com.br/fipa/me-ajudem-a-moldar-mentes-jovens",
+        "comentarios": 1,
+        "autor": "fipa",
+        "tempo_postagem": "20 horas atrás",
+        "origem": "TabNews",
+        "tags": null
+      },
+      {
+        "titulo": "[Portifolio] Desenvolvi meu portifolio baseado em um jogo rpg estilo Stardew Valley",
+        "link": "https://www.tabnews.com.br/CristRodsz/portifolio-desenvolvi-meu-portifolio-baseado-em-um-jogo-rpg-estilo-stardew-valley",
+        "comentarios": 2,
+        "autor": "CristRodsz",
+        "tempo_postagem": "12 horas atrás",
+        "origem": "TabNews",
+        "tags": null
+      },
+      {
+        "titulo": "De dev para founder: o maior bug não é no código — é na conversa",
+        "link": "https://www.tabnews.com.br/alone/de-dev-para-founder-o-maior-bug-nao-e-no-codigo-e-na-conversa",
+        "comentarios": 1,
+        "autor": "alone",
+        "tempo_postagem": "14 horas atrás",
+        "origem": "TabNews",
+        "tags": null
+      },
+      {
+        "titulo": "Dores nas mãos ou repetição excessiva de tarefas: isso te afeta?",
+        "link": "https://www.tabnews.com.br/diogom/dores-nas-maos-ou-repeticao-excessiva-de-tarefas-isso-te-afeta",
+        "comentarios": 0,
+        "autor": "diogom",
+        "tempo_postagem": "1 hora atrás",
+        "origem": "TabNews",
+        "tags": null
+      },
+      {
+        "titulo": "Volvo apresenta primeiro cinto de segurança automotivo multiadaptável do mundo",
+        "link": "https://www.tabnews.com.br/NewsletterOficial/volvo-apresenta-primeiro-cinto-de-seguranca-automotivo-multiadaptavel-do-mundo",
+        "comentarios": 0,
+        "autor": "NewsletterOficial",
+        "tempo_postagem": "1 hora atrás",
+        "origem": "TabNews",
+        "tags": null
+      },
+      {
+        "titulo": "Deixa queimar! Erros são as maiores oportunidades de aprender",
+        "link": "https://www.tabnews.com.br/MatheusNascimento/deixa-queimar-erros-sao-as-maiores-oportunidades-de-aprender",
+        "comentarios": 0,
+        "autor": "MatheusNascimento",
+        "tempo_postagem": "2 horas atrás",
+        "origem": "TabNews",
+        "tags": null
+      },
+      {
+        "titulo": "Eu fiz certo... Mas por que quebra?  - Scroll inteligente e os bastidores da frustração moderna",
+        "link": "https://www.tabnews.com.br/leonardord/eu-fiz-certo-mas-por-que-quebra-scroll-inteligente-e-os-bastidores-da-frustracao-moderna",
+        "comentarios": 0,
+        "autor": "leonardord",
+        "tempo_postagem": "12 horas atrás",
+        "origem": "TabNews",
+        "tags": null
+      },
+      {
+        "titulo": "[NOTÍCIA] Linus Torvalds barra PR por adulteração de árvore de commits",
+        "link": "https://www.tabnews.com.br/andreql/noticia-linus-torvalds-barra-pr-por-adulteracao-de-arvore-de-commits",
+        "comentarios": 3,
+        "autor": "andreql",
+        "tempo_postagem": "2 dias atrás",
+        "origem": "TabNews",
+        "tags": null
+      },
+      {
+        "titulo": "[PITCH] Construi um mvp de um saas em 24h",
+        "link": "https://www.tabnews.com.br/wescld/pitch-construi-um-mvp-de-um-saas-em-24h",
+        "comentarios": 11,
+        "autor": "wescld",
+        "tempo_postagem": "2 dias atrás",
+        "origem": "TabNews",
+        "tags": null
+      },
+      {
+        "titulo": "Golpes de venda com OLX, Mercado Livre e Enjoei",
+        "link": "https://www.tabnews.com.br/turks/golpes-de-venda-com-olx-mercado-livre-e-enjoei",
+        "comentarios": 12,
+        "autor": "turks",
+        "tempo_postagem": "2 dias atrás",
+        "origem": "TabNews",
+        "tags": null
+      },
+      {
+        "titulo": "SQL Injection: da vulnerabilidade à proteção por parâmetros",
+        "link": "https://www.tabnews.com.br/rafael/sql-injection-da-vulnerabilidade-a-protecao-por-parametros",
+        "comentarios": 1,
+        "autor": "rafael",
+        "tempo_postagem": "2 dias atrás",
+        "origem": "TabNews",
+        "tags": null
+      },
+      {
+        "titulo": "Firefox passará a detectar extensões maliciosas que roubam carteiras de moedas digitais",
+        "link": "https://www.tabnews.com.br/NewsletterOficial/firefox-passara-a-detectar-extensoes-maliciosas-que-roubam-carteiras-de-moedas-digitais",
+        "comentarios": 0,
+        "autor": "NewsletterOficial",
+        "tempo_postagem": "2 dias atrás",
+        "origem": "TabNews",
+        "tags": null
+      },
+      {
+        "titulo": "Práticas e ferramentas para manter documentações atualizadas",
+        "link": "https://www.tabnews.com.br/GheistLycis/praticas-e-ferramentas-para-manter-documentacoes-atualizadas",
+        "comentarios": 5,
+        "autor": "GheistLycis",
+        "tempo_postagem": "2 dias atrás",
+        "origem": "TabNews",
+        "tags": null
+      },
+      {
+        "titulo": "Epic Games integra ferramenta de criação de humanos digitais hiper-realistas na Unreal Engine 5",
+        "link": "https://www.tabnews.com.br/NewsletterOficial/epic-games-integra-ferramenta-de-criacao-de-humanos-digitais-hiper-realistas-na-unreal-engine-5",
+        "comentarios": 1,
+        "autor": "NewsletterOficial",
+        "tempo_postagem": "2 dias atrás",
+        "origem": "TabNews",
+        "tags": null
+      },
+      {
+        "titulo": "Um cara que precisa de feedbacks para seu canal (SelegaDev)",
+        "link": "https://www.tabnews.com.br/theselegadev/selegadev-meu-canal-no-youtube",
+        "comentarios": 4,
+        "autor": "theselegadev",
+        "tempo_postagem": "2 dias atrás",
+        "origem": "TabNews",
+        "tags": null
+      },
+      {
+        "titulo": "Startup declara falência após revelação de que funcionários fingiam ser chatbots",
+        "link": "https://www.tabnews.com.br/NewsletterOficial/startup-apoiada-declara-falencia-apos-revelacao-de-que-funcionarios-fingiam-ser-chatbots",
+        "comentarios": 4,
+        "autor": "NewsletterOficial",
+        "tempo_postagem": "1 dia atrás",
+        "origem": "TabNews",
+        "tags": null
+      },
+      {
+        "titulo": "Sobre Linguagens, Mercado, Objetivo e tudo mais.",
+        "link": "https://www.tabnews.com.br/rafaelcitario/sobre-linguagens-mercado-objetivo-e-tudo-mais",
+        "comentarios": 1,
+        "autor": "rafaelcitario",
+        "tempo_postagem": "2 dias atrás",
+        "origem": "TabNews",
+        "tags": null
+      },
+      {
+        "titulo": "[Desabafo] Como um Transtorno tem destruído e continua destruindo minha carreira e vida.",
+        "link": "https://www.tabnews.com.br/yamirenato/desabafo-como-um-transtorno-tem-destruido-e-continua-destruindo-minha-carreira-e-vida",
+        "comentarios": 27,
+        "autor": "yamirenato",
+        "tempo_postagem": "3 dias atrás",
+        "origem": "TabNews",
+        "tags": null
+      },
+      {
+        "titulo": "🤯 Como minha ruína está me reinventando",
+        "link": "https://www.tabnews.com.br/programad/como-minha-ruina-esta-me-reinventando",
+        "comentarios": 7,
+        "autor": "programad",
+        "tempo_postagem": "7 dias atrás",
+        "origem": "TabNews",
+        "tags": null
+      },
+      {
+        "titulo": "O Vai-e-Volta Infinito da Web — De PHP Raiz ao Tal de Local First que Tá Devolvendo Tudo pro Cliente",
+        "link": "https://www.tabnews.com.br/jubs1/o-vai-e-volta-infinito-da-web-de-php-raiz-ao-tal-de-local-first-que-ta-devolvendo-tudo-pro-cliente",
+        "comentarios": 12,
+        "autor": "jubs1",
+        "tempo_postagem": "6 dias atrás",
+        "origem": "TabNews",
+        "tags": null
+      },
+      {
+        "titulo": "[PITCH] Criei uma API para integração com WhatsApp em menos de 60 segundos",
+        "link": "https://www.tabnews.com.br/ivanamato/pitch-criei-uma-api-para-integracao-com-whatsapp-em-menos-de-60-segundos",
+        "comentarios": 25,
+        "autor": "ivanamato",
+        "tempo_postagem": "9 dias atrás",
+        "origem": "TabNews",
+        "tags": null
+      },
+      {
+        "titulo": "# ALERTA: Grupo Lazarus usando testes técnicos para infiltração",
+        "link": "https://www.tabnews.com.br/fibonatto/alerta-grupo-lazarus-usando-testes-tecnicos-para-infiltracao",
+        "comentarios": 1,
+        "autor": "fibonatto",
+        "tempo_postagem": "7 dias atrás",
+        "origem": "TabNews",
+        "tags": null
+      },
+      {
+        "titulo": "Como push notifications funcionam?",
+        "link": "https://www.tabnews.com.br/pdrzan/como-push-notifications-funcionam",
+        "comentarios": 2,
+        "autor": "pdrzan",
+        "tempo_postagem": "3 dias atrás",
+        "origem": "TabNews",
+        "tags": null
+      }
+    ]
+  }
+}

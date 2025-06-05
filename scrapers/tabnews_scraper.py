@@ -1,7 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 
 
 @dataclass
@@ -11,6 +11,8 @@ class Artigo:
     comentarios: int
     autor: str
     tempo_postagem: str
+    origem: str
+    tags: Optional[List[str]] = None
 
 
 class TabNewsScraper:
@@ -67,7 +69,9 @@ class TabNewsScraper:
                 link=link,
                 comentarios=comentarios,
                 autor=autor,
-                tempo_postagem=tempo
+                tempo_postagem=tempo,
+                origem="TabNews",
+                tags=None  # Será preenchido futuramente com IA
             )
             artigos.append(artigo)
         
@@ -89,6 +93,8 @@ def main():
         print(f"  Autor: {artigo.autor}")
         print(f"  Comentários: {artigo.comentarios}")
         print(f"  Postado: {artigo.tempo_postagem}")
+        print(f"  Origem: {artigo.origem}")
+        print(f"  Tags: {artigo.tags if artigo.tags else 'Não classificado'}")
         print("-" * 50)
 
 
