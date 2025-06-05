@@ -47,6 +47,7 @@ class WidiaNews:
         table.add_row("3", "➖ Remover site")
         table.add_row("4", "📋 Listar sites ativos")
         table.add_row("5", "🔄 Atualizar notícias")
+        table.add_row("6", "📊 Estatísticas do banco")
         table.add_row("0", "⬅️  Voltar ao Life OS")
         
         console.print(table)
@@ -404,18 +405,94 @@ class WidiaNews:
         self.clear_screen()
         self.show_header()
         
-        console.print("[bold yellow]🔄 Atualizando notícias...[/bold yellow]\n")
+        console.print("[bold yellow]🔄 Forçando atualização de todas as notícias...[/bold yellow]\n")
         
         active_sites = self.config_manager.get_active_sites()
         
         if not active_sites:
             console.print("[red]Nenhum site ativo para atualizar![/red]")
         else:
-            for site in active_sites:
-                console.print(f"[dim]Atualizando {site}...[/dim]")
-                # Aqui você pode adicionar lógica de cache/atualização forçada
+            console.print("[dim]Isso pode levar alguns segundos...[/dim]\n")
             
-            console.print(f"\n[green]✓ Atualização concluída![/green]")
+            # Usar o método force_update_all do news_aggregator
+            success = self.news_aggregator.force_update_all()
+            
+            if success:
+                console.print(f"\n[green]✅ Todas as fontes foram atualizadas com sucesso![/green]")
+            else:
+                console.print(f"\n[yellow]⚠️  Algumas fontes falharam na atualização[/yellow]")
+        
+        console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+        input()
+    
+    def show_database_stats(self):
+        self.clear_screen()
+        self.show_header()
+        
+        console.print("[bold yellow]📊 Estatísticas do Banco de Dados[/bold yellow]\n")
+        
+        try:
+            stats = self.news_aggregator.get_database_stats()
+            
+            # Status da conexão MongoDB
+            mongodb_status = "🟢 Conectado" if stats.get("mongodb_connected") else "🔴 Desconectado (usando fallback JSON)"
+            console.print(f"[bold]MongoDB:[/bold] {mongodb_status}\n")
+            
+            # Estatísticas por fonte
+            sources = stats.get("sources", {})
+            
+            if sources:
+                table = Table(title="Estatísticas por Fonte", box=box.ROUNDED)
+                table.add_column("Fonte", style="cyan")
+                table.add_column("Última Atualização", style="yellow")
+                table.add_column("Total de Artigos", style="green")
+                table.add_column("Status", style="white")
+                
+                for source, source_stats in sources.items():
+                    last_update = source_stats.get('ultimo_update')
+                    total_articles = source_stats.get('total_articles', 0)
+                    
+                    if last_update:
+                        # Calcular diferença de tempo
+                        from datetime import datetime, timedelta
+                        time_diff = datetime.now() - last_update
+                        hours_ago = time_diff.total_seconds() / 3600
+                        
+                        if hours_ago < 1:
+                            update_str = f"{int(time_diff.total_seconds() / 60)} min atrás"
+                            status = "🟢 Atualizado"
+                        elif hours_ago < 6:
+                            update_str = f"{hours_ago:.1f}h atrás"
+                            status = "🟡 Recente"
+                        else:
+                            update_str = f"{hours_ago:.1f}h atrás"
+                            status = "🔴 Desatualizado"
+                        
+                        last_update_str = last_update.strftime("%d/%m %H:%M")
+                    else:
+                        update_str = "Nunca"
+                        last_update_str = "N/A"
+                        status = "⚪ Não inicializado"
+                    
+                    table.add_row(
+                        source,
+                        f"{last_update_str}\n[dim]{update_str}[/dim]",
+                        str(total_articles),
+                        status
+                    )
+                
+                console.print(table)
+            else:
+                console.print("[dim]Nenhuma estatística disponível.[/dim]")
+            
+            # Informações adicionais
+            console.print(f"\n[bold]Configurações:[/bold]")
+            console.print(f"• Intervalo de atualização: 6 horas")
+            console.print(f"• Máximo de artigos por fonte: {self.config_manager.get_max_articles()}")
+            console.print(f"• Sites ativos: {', '.join(self.config_manager.get_active_sites())}")
+            
+        except Exception as e:
+            console.print(f"[red]❌ Erro ao obter estatísticas: {e}[/red]")
         
         console.print("\n[dim]Pressione Enter para continuar...[/dim]")
         input()
@@ -438,6 +515,8 @@ class WidiaNews:
                 self.list_sites()
             elif choice == "5":
                 self.update_news()
+            elif choice == "6":
+                self.show_database_stats()
             elif choice == "0":
                 self.running = False
                 console.print("\n[dim]Voltando ao menu principal...[/dim]")

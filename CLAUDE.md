@@ -92,3 +92,64 @@ python -c "from scrapers.tabnews_scraper import TabNewsScraper; print(TabNewsScr
 - requests: HTTP requests
 - beautifulsoup4: HTML parsing
 - rich: Terminal UI components
+- pymongo: MongoDB integration
+
+## MongoDB Configuration
+
+### 🐳 Docker (Recomendado - Mais Fácil)
+```bash
+# Iniciar MongoDB com Docker
+./scripts/start-mongodb.sh
+
+# Parar MongoDB
+./scripts/stop-mongodb.sh
+
+# O script automaticamente:
+# - Cria containers MongoDB + Mongo Express
+# - Configura usuário e banco de dados
+# - Cria índices otimizados
+# - Interface web em http://localhost:8081
+```
+
+### 🔧 Configuração Manual
+1. Copiar `.env.example` para `.env`
+2. Ajustar variáveis de ambiente conforme necessário
+3. O sistema usa automaticamente as configurações do `.env`
+
+### 📂 Estrutura de Configuração
+```
+├── .env                    # Configurações locais (não versionado)
+├── .env.example           # Template de configurações
+├── docker-compose.yml     # Definição dos containers
+├── docker/
+│   └── mongo-init.js      # Script de inicialização do MongoDB
+└── scripts/
+    ├── start-mongodb.sh   # Iniciar MongoDB
+    └── stop-mongodb.sh    # Parar MongoDB
+```
+
+### ⚙️  Variáveis de Ambiente
+```bash
+# MongoDB
+MONGODB_HOST=localhost
+MONGODB_PORT=27017
+MONGODB_DATABASE=lifeos
+MONGODB_USERNAME=lifeos_app
+MONGODB_PASSWORD=lifeos_app_password
+
+# Configurações da aplicação
+NEWS_UPDATE_INTERVAL_HOURS=6
+MAX_ARTICLES_PER_SOURCE=50
+```
+
+### 🔄 Sistema de Fallback
+- **Primeira opção**: MongoDB com autenticação
+- **Segunda opção**: MongoDB sem autenticação
+- **Terceira opção**: Arquivo JSON local
+- **Resultado**: Sistema sempre funciona independente da configuração
+
+### 🛡️ Configurações do Sistema de Cache
+- **Controle de Tempo**: Configurável via `NEWS_UPDATE_INTERVAL_HOURS` (padrão: 6h)
+- **Persistência**: MongoDB para produção, JSON para fallback
+- **Prevenção de Rate Limiting**: Evita requests excessivos aos sites de notícias
+- **Monitoramento**: Interface para visualizar status e estatísticas
