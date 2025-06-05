@@ -27,10 +27,12 @@ python main.py
 ### 📰 **Módulo de Notícias** (Implementado)
 - 🔄 **Agregação Inteligente**: Coleta automática do TabNews com rate limiting e TTL de 5 dias
 - 📖 **Leitura Completa**: Visualização instantânea de artigos e comentários no terminal
-- 💾 **Persistência Robusta**: MongoDB com cache de artigos detalhados e fallback JSON
+- 💾 **Persistência Dual**: MongoDB local/remoto com cache detalhado e fallback JSON
+- 🌐 **MongoDB Remoto**: Suporte completo ao Coolify/Hostinger para acesso universal
 - 🎛️ **Interface Rica**: Navegação interativa com atalho 'M' para menu principal
 - ⚡ **Performance**: Cache inteligente com atualizações de 6h e limpeza automática
 - 🎯 **Extração Avançada**: 89% de taxa de extração de comentários sem duplicatas
+- 🧪 **Ferramentas Diagnóstico**: Utilitário completo para testar conexões MongoDB
 
 ### 🔮 **Módulos Futuros**
 - 📅 **Agenda**: Gerenciamento de compromissos e eventos
@@ -213,8 +215,9 @@ flowchart LR
 
 ### Prerequisites
 - **Python 3.8+**
-- **Docker & Docker Compose** (recomendado)
+- **Docker & Docker Compose** (para modo local)
 - **Git**
+- **Servidor Coolify/Hostinger** (para modo remoto - opcional)
 
 ### Step-by-Step Installation
 
@@ -229,18 +232,27 @@ flowchart LR
    pip install -r requirements.txt
    ```
 
-3. **Setup Environment** (Opcional)
+3. **Choose Database Mode**
+
+   #### 🏠 **Local Mode** (Recomendado para começar)
    ```bash
    cp .env.example .env
-   # Edit .env if needed
-   ```
-
-4. **Start MongoDB** (Recomendado)
-   ```bash
+   # DATABASE_MODE=local (padrão)
+   
+   # Start MongoDB
    ./scripts/start-mongodb.sh
    ```
 
-5. **Launch Life OS**
+   #### 🌐 **Remote Mode** (Para acesso universal)
+   ```bash
+   cp .env.remote_example .env
+   # Configure suas credenciais do Coolify/Hostinger
+   
+   # Test connection
+   python utils/test_connection.py "sua-connection-string"
+   ```
+
+4. **Launch Life OS**
    ```bash
    python main.py
    ```
@@ -251,6 +263,10 @@ flowchart LR
 python main.py
 ```
 
+### 📚 Setup Guides
+- **Remote MongoDB**: [Guia completo Coolify/Hostinger](docs/REMOTE_MONGODB_SETUP.md)
+- **Local Development**: Use configuração padrão com Docker
+
 ## 📖 Usage Guide
 
 ### Basic Navigation
@@ -258,10 +274,22 @@ python main.py
 2. **News Module**: 
    - `1` - View latest articles (with instant cache loading)
    - `2-5` - Manage sources and settings
-   - `6` - View database statistics with article cache metrics
+   - `6` - View database statistics (local/remote) with cache metrics
    - `M` - Return to main menu from any submenu
 3. **Article List**: Type article number to read full content instantly
 4. **Article View**: Switch between content and comments with enhanced navigation
+
+### Database Configuration
+```bash
+# Ver configuração atual
+python -c "from utils.config import Config; Config.print_config()"
+
+# Testar conexão MongoDB
+python utils/test_connection.py "mongodb://connection-string"
+
+# Alternar entre local/remoto
+# Edite DATABASE_MODE no .env
+```
 
 ### Advanced Features
 - **Force Update**: Option 5 in News Menu
@@ -270,36 +298,73 @@ python main.py
 
 ## 🔧 Configuration
 
-### Environment Variables (.env)
+### Database Mode Selection
+
+O Life OS suporta dois modos de banco de dados:
+
+#### 🏠 **Local Mode** (Padrão)
 ```bash
-# MongoDB Configuration
+# .env
+DATABASE_MODE=local
 MONGODB_HOST=localhost
 MONGODB_PORT=27017
 MONGODB_DATABASE=lifeos
 MONGODB_USERNAME=lifeos_app
 MONGODB_PASSWORD=lifeos_app_password
+```
 
-# Application Settings
+#### 🌐 **Remote Mode** (Coolify/Hostinger)
+```bash
+# .env
+DATABASE_MODE=remote
+REMOTE_MONGODB_HOST=seu-servidor.hostinger.com
+REMOTE_MONGODB_PORT=27017
+REMOTE_MONGODB_DATABASE=lifeos
+REMOTE_MONGODB_USERNAME=lifeos_user
+REMOTE_MONGODB_PASSWORD=sua-senha-segura
+
+# Ou usar URI completa:
+REMOTE_MONGODB_URI=mongodb://user:pass@host:port/database
+```
+
+### Application Settings
+```bash
 NEWS_UPDATE_INTERVAL_HOURS=6
 MAX_ARTICLES_PER_SOURCE=50
 DEBUG=false
 ```
 
-### Docker Services
-- **MongoDB**: Primary database (port 27017)
+### Infrastructure Options
+
+#### 🐳 **Local (Docker)**
+- **MongoDB**: Local database (port 27017)
 - **Mongo Express**: Web interface (http://localhost:8081)
+- **Uso**: Desenvolvimento e testes
+
+#### ☁️ **Remote (Coolify/Hostinger)**
+- **MongoDB**: Servidor dedicado remoto
+- **Acesso**: Via internet de qualquer lugar
+- **Uso**: Produção e acesso universal
+- **Setup**: Ver [Guia de Configuração](docs/REMOTE_MONGODB_SETUP.md)
 
 ## 📊 Monitoring
 
 ### Built-in Statistics
-- MongoDB connection status
-- Last update times per source
-- Article count per source
-- Update intervals and next scheduled updates
+- **MongoDB connection status** (local/remote)
+- **Database mode**: LOCAL ou REMOTE
+- **Last update times** per source
+- **Article count** per source com cache metrics
+- **Update intervals** and next scheduled updates
 
 ### External Monitoring
+
+#### 🏠 Local Mode
 - **Mongo Express**: http://localhost:8081 (database web interface)
 - **Docker Logs**: `docker-compose logs mongodb`
+
+#### 🌐 Remote Mode
+- **Coolify Dashboard**: Interface web do servidor
+- **Connection Testing**: `python utils/test_connection.py`
 - **System Status**: News Module → Option 6
 
 ## 🚨 Troubleshooting
@@ -307,6 +372,8 @@ DEBUG=false
 ### Common Issues
 
 **MongoDB Connection Failed**
+
+*Local Mode:*
 ```bash
 # Check Docker status
 docker ps | grep lifeos-mongodb
@@ -314,6 +381,18 @@ docker ps | grep lifeos-mongodb
 # Restart MongoDB
 ./scripts/stop-mongodb.sh
 ./scripts/start-mongodb.sh
+```
+
+*Remote Mode:*
+```bash
+# Test connection
+python utils/test_connection.py "sua-connection-string"
+
+# Check configuration
+python -c "from utils.config import Config; Config.print_config()"
+
+# Verify Coolify service status
+# Via Coolify dashboard
 ```
 
 **No Articles Loading**
@@ -332,16 +411,48 @@ news.force_update_all()
 chmod +x scripts/*.sh
 ```
 
+## 🌐 MongoDB Remote Integration
+
+### ✨ **Acesso Universal aos Dados**
+Com o suporte ao MongoDB remoto via Coolify/Hostinger, o Life OS agora oferece:
+
+- **📱 Multi-dispositivo**: Acesse seus dados de qualquer lugar
+- **☁️ Backup automático**: Dados seguros no servidor remoto 24/7
+- **🚀 Performance**: MongoDB v7.0.21 em servidor dedicado
+- **🔄 Sincronização**: Automática entre múltiplos clientes
+- **🔧 Flexibilidade**: Alterna facilmente entre local e remoto
+
+### 🛠️ **Configuração Rápida**
+```bash
+# 1. Configurar modo remoto
+cp .env.remote_example .env
+# Editar credenciais do Coolify
+
+# 2. Testar conexão
+python utils/test_connection.py "sua-connection-string"
+
+# 3. Executar Life OS
+python main.py
+```
+
+### 📚 **Documentação Completa**
+- [📖 Guia Setup Remoto](docs/REMOTE_MONGODB_SETUP.md) - Como configurar MongoDB no Coolify/Hostinger
+- [🧪 Test Connection](utils/test_connection.py) - Ferramenta de diagnóstico de conexão
+- [⚙️ Config Management](utils/config.py) - Sistema de configuração dual
+
 ## 🔮 Roadmap
 
 ### Phase 1: News Enhancement ✅
 - [x] MongoDB integration with Docker and TTL indexes
+- [x] **Remote MongoDB support** with Coolify/Hostinger integration
+- [x] **Dual database mode** (local/remote) with automatic fallback
 - [x] Full article reading with comments and 89% extraction rate
 - [x] Rate limiting, caching, and automatic cleanup
 - [x] Statistics and monitoring with cache metrics
 - [x] Rich terminal interface with direct navigation shortcuts
 - [x] Article details caching system with 6-hour updates
 - [x] Enhanced comment extraction with duplicate filtering
+- [x] **MongoDB connection testing utility** for diagnostics
 
 ### Phase 2: Multi-Source News 🚧
 - [ ] Dev.to scraper
@@ -378,8 +489,14 @@ pip install -r requirements.txt
 # Run tests
 python -c "from scrapers.tabnews_scraper import TabNewsScraper; print('✅ Scraper OK')"
 
-# Check system status
+# Check system configuration
 python -c "from utils.config import Config; Config.print_config()"
+
+# Test MongoDB connection (local or remote)
+python utils/test_connection.py "mongodb://connection-string"
+
+# Switch database modes for testing
+# Edit DATABASE_MODE in .env file
 ```
 
 ## 📄 License
@@ -390,8 +507,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **TabNews**: Primary news source (https://tabnews.com.br)
 - **Rich**: Beautiful terminal interfaces (https://rich.readthedocs.io)
-- **MongoDB**: Robust document database
-- **Docker**: Containerization platform
+- **MongoDB**: Robust document database (local & remote)
+- **Docker**: Containerization platform for local development
+- **Coolify**: Self-hosted PaaS for remote MongoDB deployment
+- **Hostinger**: Cloud hosting infrastructure
 
 ---
 
@@ -399,6 +518,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **[⬆ Back to Top](#-life-os---sistema-de-organização-pessoal)**
 
-Made with ❤️ using Python, MongoDB, and Rich Terminal UI
+Made with ❤️ using Python, MongoDB (Local & Remote), and Rich Terminal UI
 
 </div>
