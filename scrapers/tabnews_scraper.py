@@ -2,6 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 from dataclasses import dataclass
 from typing import List, Optional
+import re
 
 
 @dataclass
@@ -197,69 +198,117 @@ class TabNewsScraper:
         """
         comentarios = []
         
-        # No TabNews, comentários geralmente estão em seções específicas
-        # Esta é uma implementação básica - pode precisar de ajustes
-        comment_sections = soup.find_all(['div', 'article'])
+        # Procurar por todas as divs que possam conter comentários
+        all_divs = soup.find_all('div')
         
-        for section in comment_sections:
-            # Procurar por elementos que parecem comentários
-            text = section.text.strip()
+        for div in all_divs:
+            # Verificar se é um comentário potencial
+            # Comentários têm: link de autor, tempo "X atrás", e conteúdo
             
-            # Critérios para identificar comentários:
-            # - Contém texto substancial
-            # - Tem informações de autor/tempo
-            # - Não é o conteúdo principal
+            # Procurar por link de autor (formato /username)
+            author_link = None
+            links = div.find_all('a', href=True)
+            for link in links:
+                href = link.get('href', '')
+                if href.startswith('/') and href.count('/') == 1 and len(href) > 1:
+                    # Verificar se não é um link de navegação comum
+                    link_text = link.text.strip()
+                    if link_text and not link_text in ['TabNews', 'Recentes', 'Relevantes']:
+                        author_link = link
+                        break
             
-            if len(text) > 50 and any(keyword in text for keyword in ['atrás', 'comentário']):
-                # Tentar extrair autor do comentário
-                autor_comment = ""
-                tempo_comment = ""
+            if not author_link:
+                continue
                 
-                links = section.find_all('a')
-                for link in links:
-                    href = link.get('href', '')
-                    if href.startswith('/') and href.count('/') == 1:
-                        autor_comment = link.text.strip()
+            # Procurar por indicador de tempo
+            time_text = ""
+            time_elements = div.find_all(string=lambda text: text and 'atrás' in text)
+            if time_elements:
+                time_text = time_elements[0].strip()
+            
+            if not time_text:
+                continue
+            
+            # Extrair texto do comentário
+            comment_text = div.text.strip()
+            
+            # Filtros para evitar falsos positivos
+            # 1. Não deve conter "min de leitura" (indica artigo principal)
+            # 2. Não deve conter "Executando verificação de segurança"
+            # 3. Não deve ser muito curto
+            # 4. Não deve conter certas palavras-chave de navegação
+            
+            skip_keywords = [
+                'min de leitura',
+                'Executando verificação de segurança',
+                'Carregando publicação patrocinada',
+                'ResponderCarregando'
+            ]
+            
+            if any(keyword in comment_text for keyword in skip_keywords):
+                continue
+            
+            # Limpar o texto do comentário
+            autor = author_link.text.strip()
+            
+            # Pegar apenas o texto relevante do comentário
+            # Estratégia: encontrar onde termina os metadados e começa o conteúdo real
+            clean_text = comment_text
+            
+            # Remover autor
+            clean_text = clean_text.replace(autor, '', 1)
+            
+            # Encontrar e remover TODAS as ocorrências de padrões de tempo
+            # Isso inclui "X horas atrás", "X dias atrás", etc.
+            time_patterns = [
+                r'\d+\s*segundos?\s*atrás',
+                r'\d+\s*minutos?\s*atrás', 
+                r'\d+\s*horas?\s*atrás',
+                r'\d+\s*dias?\s*atrás',
+                r'\d+\s*semanas?\s*atrás',
+                r'\d+\s*mes(es)?\s*atrás',
+                r'\d+\s*anos?\s*atrás'
+            ]
+            
+            for pattern in time_patterns:
+                clean_text = re.sub(pattern, '', clean_text, flags=re.IGNORECASE)
+            
+            # Remover "Responder" 
+            clean_text = re.sub(r'\bResponder\b', '', clean_text)
+            
+            # Remover números isolados no início
+            clean_text = re.sub(r'^\d+\s*', '', clean_text.strip())
+            
+            # Se o texto começar com "atrás" (resquício), remover
+            words = clean_text.split()
+            while words and words[0].lower() in ['atrás', 'atras']:
+                words.pop(0)
+            clean_text = ' '.join(words)
+            
+            # Limpar espaços extras
+            clean_text = ' '.join(clean_text.split())
+            
+            # Verificar se o comentário é válido
+            if len(clean_text) > 20 and len(clean_text) < 5000:  # Entre 20 e 5000 caracteres
+                # Verificar se não é duplicata por conteúdo similar
+                is_duplicate = False
+                for existing in comentarios:
+                    # Comparar primeiros 50 caracteres
+                    if existing.conteudo[:50] == clean_text[:50]:
+                        is_duplicate = True
                         break
                 
-                # Extrair tempo
-                spans = section.find_all('span')
-                for span in spans:
-                    span_text = span.text.strip()
-                    if 'atrás' in span_text:
-                        tempo_comment = span_text
-                        break
-                
-                # Extrair conteúdo do comentário (removendo metadados)
-                content_text = text
-                if autor_comment:
-                    content_text = content_text.replace(autor_comment, '')
-                if tempo_comment:
-                    content_text = content_text.replace(tempo_comment, '')
-                
-                # Limpar o texto
-                content_text = content_text.strip()
-                
-                if len(content_text) > 20 and autor_comment:
+                if not is_duplicate:
                     comentario = Comentario(
-                        autor=autor_comment,
-                        conteudo=content_text,
-                        tempo_postagem=tempo_comment,
-                        respostas=[]  # Por simplicidade, não implementando respostas aninhadas ainda
+                        autor=autor,
+                        conteudo=clean_text,
+                        tempo_postagem=time_text,
+                        respostas=[]
                     )
                     comentarios.append(comentario)
         
-        # Remover duplicatas e limitar quantidade
-        unique_comentarios = []
-        seen_content = set()
-        
-        for comentario in comentarios:
-            content_hash = comentario.conteudo[:100]  # Usar primeiros 100 chars como hash
-            if content_hash not in seen_content:
-                unique_comentarios.append(comentario)
-                seen_content.add(content_hash)
-        
-        return unique_comentarios[:20]  # Limitar a 20 comentários
+        # Limitar a 20 comentários
+        return comentarios[:20]
 
 
 def main():
