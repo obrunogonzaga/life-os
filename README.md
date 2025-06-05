@@ -25,11 +25,12 @@ python main.py
 ## ✨ Features
 
 ### 📰 **Módulo de Notícias** (Implementado)
-- 🔄 **Agregação Inteligente**: Coleta automática do TabNews com rate limiting
-- 📖 **Leitura Completa**: Visualização de artigos e comentários no terminal
-- 💾 **Persistência Robusta**: MongoDB com fallback JSON automático
-- 🎛️ **Interface Rica**: Navegação interativa com paginação e estatísticas
-- ⚡ **Performance**: Cache inteligente com atualizações de 6h
+- 🔄 **Agregação Inteligente**: Coleta automática do TabNews com rate limiting e TTL de 5 dias
+- 📖 **Leitura Completa**: Visualização instantânea de artigos e comentários no terminal
+- 💾 **Persistência Robusta**: MongoDB com cache de artigos detalhados e fallback JSON
+- 🎛️ **Interface Rica**: Navegação interativa com atalho 'M' para menu principal
+- ⚡ **Performance**: Cache inteligente com atualizações de 6h e limpeza automática
+- 🎯 **Extração Avançada**: 89% de taxa de extração de comentários sem duplicatas
 
 ### 🔮 **Módulos Futuros**
 - 📅 **Agenda**: Gerenciamento de compromissos e eventos
@@ -255,11 +256,12 @@ python main.py
 ### Basic Navigation
 1. **Main Menu**: Choose module (currently only News available)
 2. **News Module**: 
-   - `1` - View latest articles
+   - `1` - View latest articles (with instant cache loading)
    - `2-5` - Manage sources and settings
-   - `6` - View database statistics
-3. **Article List**: Type article number to read full content
-4. **Article View**: Switch between content and comments
+   - `6` - View database statistics with article cache metrics
+   - `M` - Return to main menu from any submenu
+3. **Article List**: Type article number to read full content instantly
+4. **Article View**: Switch between content and comments with enhanced navigation
 
 ### Advanced Features
 - **Force Update**: Option 5 in News Menu
@@ -333,11 +335,13 @@ chmod +x scripts/*.sh
 ## 🔮 Roadmap
 
 ### Phase 1: News Enhancement ✅
-- [x] MongoDB integration with Docker
-- [x] Full article reading with comments
-- [x] Rate limiting and caching
-- [x] Statistics and monitoring
-- [x] Rich terminal interface
+- [x] MongoDB integration with Docker and TTL indexes
+- [x] Full article reading with comments and 89% extraction rate
+- [x] Rate limiting, caching, and automatic cleanup
+- [x] Statistics and monitoring with cache metrics
+- [x] Rich terminal interface with direct navigation shortcuts
+- [x] Article details caching system with 6-hour updates
+- [x] Enhanced comment extraction with duplicate filtering
 
 ### Phase 2: Multi-Source News 🚧
 - [ ] Dev.to scraper

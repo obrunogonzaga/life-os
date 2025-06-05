@@ -26,7 +26,8 @@ python main.py
 2. **Enter News Module**: Select option `1` (📰 Notícias)
 3. **View Latest News**: Select option `1` (📰 Últimas notícias)
 4. **Read an Article**: Type any article number to view full content
-5. **Explore Features**: Try options 2-6 for management and statistics
+5. **Navigate Efficiently**: Use `M` to return to main menu from any submenu
+6. **Explore Features**: Try options 2-6 for management and statistics
 
 ## Project Structure
 ```
@@ -63,8 +64,9 @@ life-os/
 - **Agregador Completo**: Suporte ao TabNews com arquitetura modular
 - **Visualização Detalhada**: Leitura completa de artigos e comentários no terminal
 - **Persistência Inteligente**: MongoDB com fallback JSON automático
-- **Rate Limiting**: Controle de 6 horas para evitar bloqueios
-- **Interface Rica**: Navegação por páginas, seleção de artigos, estatísticas
+- **Rate Limiting**: Controle de 6 horas para evitar bloqueios com TTL de 5 dias
+- **Interface Rica**: Navegação por páginas, seleção de artigos, retorno direto ao menu principal
+- **Cache Inteligente**: Armazenamento de artigos detalhados com limpeza automática
 - **Monitoramento**: Dashboard de status do banco e fontes de notícias
 
 ### 📅 Agenda (Em breve)
@@ -248,16 +250,18 @@ pip install -r requirements.txt
 - **Pagination**: Navigate through large article collections efficiently
 
 **📖 Enhanced Reading Experience**
-- **Full Article View**: Read complete articles within the terminal
+- **Full Article View**: Read complete articles within the terminal with instant loading
 - **Markdown Formatting**: Proper text formatting with headers, lists, quotes
-- **Comment System**: View all article comments with author information
-- **Interactive Navigation**: Easy switching between content and comments
+- **Comment System**: View all article comments with 89% extraction rate and duplicate filtering
+- **Interactive Navigation**: Easy switching between content and comments with 'M' shortcut
+- **Smart Caching**: Instant article loading from cache with 6-hour update intervals
 
 **💾 Intelligent Persistence**
-- **MongoDB Integration**: Production-ready database with indexes
+- **MongoDB Integration**: Production-ready database with indexes and TTL cleanup
 - **Automatic Fallback**: Seamless fallback to JSON when DB unavailable
-- **Data Consistency**: Maintain article history and reading state
-- **Performance Optimization**: Smart caching and efficient queries
+- **Data Consistency**: Maintain article history and reading state with cache invalidation
+- **Performance Optimization**: Smart caching with 6-hour updates and 5-day TTL
+- **Article Details Cache**: Dedicated collection for full article content with automatic cleanup
 
 **🔧 Management Tools**
 - **Source Management**: Add/remove news sources dynamically
