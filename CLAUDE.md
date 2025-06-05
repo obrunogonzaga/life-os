@@ -44,7 +44,8 @@ life-os/
 │   ├── config.py             # Sistema de configuração centralizado
 │   ├── config_manager.py     # Gerencia sites ativos/inativos
 │   ├── database_manager.py   # Gerenciador MongoDB com fallbacks
-│   └── news_aggregator.py    # Agrega notícias com controle de rate limiting
+│   ├── news_aggregator.py    # Agrega notícias com controle de rate limiting
+│   └── test_connection.py    # Utilitário para testar conexões MongoDB
 ├── docker/                   # Configuração Docker
 │   └── mongo-init.js         # Script de inicialização do MongoDB
 ├── scripts/                  # Scripts de automação
@@ -159,6 +160,9 @@ if articles:
 
 # Testar sistema de configuração
 python -c "from utils.config import Config; Config.print_config()"
+
+# Testar conexão MongoDB (local ou remoto)
+python utils/test_connection.py "mongodb://user:pass@host:port/database"
 ```
 
 ## Future Features
