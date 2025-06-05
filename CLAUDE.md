@@ -1,22 +1,46 @@
-# Widia News - Project Documentation
+# Life OS - Sistema de Organização Pessoal
 
 ## Overview
-Widia News is a tech news aggregator that collects articles from multiple sources into a unified interface. Currently supports TabNews with a modular architecture for easy expansion.
+Life OS é um sistema modular de linha de comando para organização pessoal, com módulos para diferentes aspectos da vida. Atualmente conta com um módulo de agregação de notícias de tecnologia totalmente funcional.
 
 ## Project Structure
 ```
-widia-news/
-├── main.py                 # Interactive CLI menu
-├── scrapers/              # Web scrapers for different sites
-│   └── tabnews_scraper.py # TabNews scraper implementation
-├── utils/                 # Core utilities
-│   ├── config_manager.py  # Manages active/inactive sites
-│   └── news_aggregator.py # Aggregates news from multiple sources
-├── data/                  # Cache and configuration storage
-│   ├── config.json       # User preferences
-│   └── news_cache.json   # Cached news articles
-└── requirements.txt       # Python dependencies
+life-os/
+├── main.py                 # Menu principal do Life OS
+├── news_menu.py           # Módulo de notícias (antigo main.py)
+├── scrapers/              # Web scrapers para diferentes sites
+│   └── tabnews_scraper.py # Implementação do scraper TabNews
+├── utils/                 # Utilitários centrais
+│   ├── config_manager.py  # Gerencia sites ativos/inativos
+│   └── news_aggregator.py # Agrega notícias de múltiplas fontes
+├── data/                  # Armazenamento de cache e configuração
+│   ├── config.json       # Preferências do usuário
+│   └── news_cache.json   # Cache de artigos de notícias
+└── requirements.txt       # Dependências Python
 ```
+
+## Módulos do Life OS
+
+### 📰 Notícias (Implementado)
+- Agregador de notícias de tecnologia
+- Suporte atual: TabNews
+- Cache inteligente de 5 minutos
+- Interface interativa para gerenciar fontes
+
+### 📅 Agenda (Em breve)
+- Gerenciamento de compromissos e eventos
+
+### ✅ Tarefas (Em breve)
+- Sistema de gerenciamento de tarefas e projetos
+
+### 💰 Finanças (Em breve)
+- Controle financeiro pessoal
+
+### 📝 Notas (Em breve)
+- Sistema de anotações e documentação pessoal
+
+### 🎯 Hábitos (Em breve)
+- Rastreamento e desenvolvimento de hábitos
 
 ## Key Components
 
@@ -38,12 +62,15 @@ class Artigo:
 - **Max Articles**: 50 per site (configurable)
 - **Active Sites**: User-controlled list of sources
 
-## Testing Commands
+## Comandos para Execução
 ```bash
-# Run the application
+# Executar o Life OS
 python main.py
 
-# Test scraper directly
+# Testar apenas o módulo de notícias
+python news_menu.py
+
+# Testar scraper diretamente
 python -c "from scrapers.tabnews_scraper import TabNewsScraper; print(TabNewsScraper().scrape_artigos())"
 ```
 
