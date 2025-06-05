@@ -48,7 +48,8 @@ class WidiaNews:
         table.add_row("4", "📋 Listar sites ativos")
         table.add_row("5", "🔄 Atualizar notícias")
         table.add_row("6", "📊 Estatísticas do banco")
-        table.add_row("0", "⬅️  Voltar ao Life OS")
+        table.add_row("", "")  # Linha em branco para separação
+        table.add_row("0 / M", "🏠 Menu principal Life OS")
         
         console.print(table)
         console.print()
@@ -114,6 +115,10 @@ class WidiaNews:
             
             if choice in ['s', 'sair', '0']:
                 break
+            elif choice == 'm':
+                # Voltar direto ao menu principal do Life OS
+                self.running = False
+                break
             elif choice in ['p', 'proximo', '>'] and current_page < total_pages - 1:
                 current_page += 1
             elif choice in ['a', 'anterior', '<'] and current_page > 0:
@@ -145,7 +150,8 @@ class WidiaNews:
             table.add_row("F", "⏭️  Última página")
         
         table.add_row("1-N", "📖 Ver artigo (digite o número)")
-        table.add_row("S / 0", "❌ Sair")
+        table.add_row("S / 0", "📰 Voltar ao menu Notícias")
+        table.add_row("M", "🏠 Menu principal Life OS")
         
         console.print("\n[bold]Navegação:[/bold]")
         console.print(table)
@@ -253,7 +259,8 @@ class WidiaNews:
             table.add_row("1", "📄 Ver conteúdo")
             table.add_row("2", f"💬 Ver comentários ({len(artigo.comentarios)})")
             table.add_row("3", "🔗 Copiar link")
-            table.add_row("0", "⬅️  Voltar")
+            table.add_row("0", "⬅️  Voltar às notícias")
+            table.add_row("M", "🏠 Menu principal Life OS")
             
             console.print(table)
             
@@ -269,6 +276,9 @@ class WidiaNews:
                 console.print("\n[dim]Pressione Enter para continuar...[/dim]")
                 input()
             elif choice == "0":
+                break
+            elif choice.lower() == "m":
+                self.running = False
                 break
             else:
                 console.print("\n[red]Opção inválida![/red]")
@@ -316,12 +326,16 @@ class WidiaNews:
             if current_page < total_pages - 1:
                 controls.append("P = Próxima")
             controls.append("S = Sair")
+            controls.append("M = Menu Life OS")
             
             console.print(f"[dim]{' | '.join(controls)}[/dim]")
             
             choice = Prompt.ask("\nNavegação", default="s").lower()
             
             if choice in ['s', 'sair']:
+                break
+            elif choice == 'm':
+                self.running = False
                 break
             elif choice in ['p', 'proximo'] and current_page < total_pages - 1:
                 current_page += 1
@@ -582,9 +596,9 @@ class WidiaNews:
                 self.update_news()
             elif choice == "6":
                 self.show_database_stats()
-            elif choice == "0":
+            elif choice in ["0", "m", "M"]:
                 self.running = False
-                console.print("\n[dim]Voltando ao menu principal...[/dim]")
+                console.print("\n[dim]Voltando ao menu principal Life OS...[/dim]")
             else:
                 console.print("\n[red]Opção inválida![/red]")
                 console.print("[dim]Pressione Enter para continuar...[/dim]")
