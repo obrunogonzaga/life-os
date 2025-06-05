@@ -69,6 +69,9 @@ class Config:
     NEWS_UPDATE_INTERVAL_HOURS = int(os.getenv("NEWS_UPDATE_INTERVAL_HOURS", "6"))
     MAX_ARTICLES_PER_SOURCE = int(os.getenv("MAX_ARTICLES_PER_SOURCE", "50"))
     
+    # Todoist Integration
+    TODOIST_API_TOKEN = os.getenv("TODOIST_API_TOKEN")
+    
     # Development Settings
     DEBUG = os.getenv("DEBUG", "false").lower() == "true"
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
@@ -159,6 +162,7 @@ class Config:
         print(f"   ⚙️ Configurações da Aplicação:")
         print(f"      Intervalo de atualização: {cls.NEWS_UPDATE_INTERVAL_HOURS}h")
         print(f"      Max artigos por fonte: {cls.MAX_ARTICLES_PER_SOURCE}")
+        print(f"      Todoist Token: {'✅ Configurado' if cls.TODOIST_API_TOKEN else '❌ Não configurado'}")
         print(f"      Debug Mode: {'✅ Sim' if cls.DEBUG else '❌ Não'}")
         print()
     
