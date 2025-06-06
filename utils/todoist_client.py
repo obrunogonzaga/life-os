@@ -363,7 +363,10 @@ class TodoistClient:
     def get_completed_tasks(self, project_id: Optional[str] = None, 
                            since: Optional[str] = None, until: Optional[str] = None,
                            limit: int = 30) -> List[Dict[str, Any]]:
-        """Get completed tasks"""
+        """Get completed tasks using Sync API"""
+        # Use Sync API v9 for completed tasks
+        sync_url = "https://api.todoist.com/sync/v9/completed/get_all"
+        
         params = {"limit": limit}
         if project_id:
             params["project_id"] = project_id
@@ -372,5 +375,15 @@ class TodoistClient:
         if until:
             params["until"] = until
         
-        data = self._make_request("GET", "tasks/completed", params)
-        return data.get("items", []) if data else []
+        try:
+            response = requests.get(sync_url, headers=self.headers, params=params)
+            response.raise_for_status()
+            
+            if response.content:
+                data = response.json()
+                return data.get("items", []) if data else []
+            return []
+            
+        except requests.exceptions.RequestException as e:
+            print(f"❌ Erro ao buscar tarefas concluídas: {e}")
+            return []

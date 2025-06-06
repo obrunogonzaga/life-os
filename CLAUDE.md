@@ -191,7 +191,7 @@ class TodoistLabel:
 - **Modular Design**: Easy addition of new scrapers and modules
 - **Docker Integration**: Zero-config setup with automated database
 - **Environment Management**: Flexible configuration via .env files
-- **API Integration**: RESTful clients for external services (Todoist)
+- **API Integration**: RESTful clients for external services (Todoist REST v2 + Sync v9)
 - **Rich Terminal UI**: Advanced terminal interfaces with formatting and interactivity
 
 ## Comandos para Execução
@@ -270,6 +270,17 @@ if task:
     print(f'Tarefa criada: {task.content} (ID: {task.id})')
     client.complete_task(task.id)
     print('Tarefa marcada como concluída')
+"
+
+# Testar tarefas concluídas (corrigido - usa Sync API v9)
+python -c "
+from utils.todoist_client import TodoistClient
+from utils.config import Config
+client = TodoistClient(Config.TODOIST_API_TOKEN)
+completed = client.get_completed_tasks(limit=5)
+print(f'Tarefas concluídas: {len(completed)}')
+for task in completed[:3]:
+    print(f'  ✓ {task.get(\"content\", task.get(\"item\", {}).get(\"content\", \"Sem título\"))}')
 "
 
 # Testar funcionalidades do módulo de tarefas
