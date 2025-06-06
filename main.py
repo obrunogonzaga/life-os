@@ -12,6 +12,7 @@ from datetime import datetime
 from modules.news import WidiaNews
 from modules.tools import ToolsModule
 from modules.tasks import TasksModule
+from modules.encora import EncoraModule
 
 
 console = Console()
@@ -46,9 +47,10 @@ class LifeOS:
         table.add_row("2", "🔧 Ferramentas", "Utilitários e gerenciamento")
         table.add_row("3", "📅 Agenda", "[dim italic]Em breve[/dim italic]")
         table.add_row("4", "✅ Tarefas", "Gerenciamento com Todoist")
-        table.add_row("5", "💰 Finanças", "[dim italic]Em breve[/dim italic]")
-        table.add_row("6", "📝 Notas", "[dim italic]Em breve[/dim italic]")
-        table.add_row("7", "🎯 Hábitos", "[dim italic]Em breve[/dim italic]")
+        table.add_row("5", "🏢 Encora", "Ferramentas do trabalho")
+        table.add_row("6", "💰 Finanças", "[dim italic]Em breve[/dim italic]")
+        table.add_row("7", "📝 Notas", "[dim italic]Em breve[/dim italic]")
+        table.add_row("8", "🎯 Hábitos", "[dim italic]Em breve[/dim italic]")
         table.add_row("0", "❌ Sair", "Encerrar o sistema")
         
         console.print(table)
@@ -68,6 +70,11 @@ class LifeOS:
         """Lança o módulo de tarefas"""
         tasks_app = TasksModule()
         tasks_app.run()
+    
+    def launch_encora_module(self):
+        """Lança o módulo Encora"""
+        encora_app = EncoraModule()
+        encora_app.run()
     
     def coming_soon(self, module_name):
         """Exibe mensagem de módulo em desenvolvimento"""
@@ -101,10 +108,12 @@ class LifeOS:
             elif choice == "4":
                 self.launch_tasks_module()
             elif choice == "5":
-                self.coming_soon("Finanças")
+                self.launch_encora_module()
             elif choice == "6":
-                self.coming_soon("Notas")
+                self.coming_soon("Finanças")
             elif choice == "7":
+                self.coming_soon("Notas")
+            elif choice == "8":
                 self.coming_soon("Hábitos")
             elif choice == "0":
                 self.running = False

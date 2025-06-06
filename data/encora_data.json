@@ -1,0 +1,20 @@
+{
+  "ponto": {
+    "registros": [],
+    "configuracoes": {
+      "carga_horaria_diaria": 8,
+      "horario_almoco": "12:00-13:00"
+    }
+  },
+  "notas": [
+    {
+      "id": 1,
+      "titulo": "teste",
+      "conteudo": "teste",
+      "data": "2025-06-05 23:55",
+      "tags": []
+    }
+  ],
+  "projetos": [],
+  "metas": []
+}
