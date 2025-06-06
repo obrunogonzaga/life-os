@@ -13,6 +13,7 @@ from modules.news import WidiaNews
 from modules.tools import ToolsModule
 from modules.tasks import TasksModule
 from modules.encora import EncoraModule
+from modules.finances import FinancesModule
 
 
 console = Console()
@@ -48,7 +49,7 @@ class LifeOS:
         table.add_row("3", "📅 Agenda", "[dim italic]Em breve[/dim italic]")
         table.add_row("4", "✅ Tarefas", "Gerenciamento com Todoist")
         table.add_row("5", "🏢 Encora", "Ferramentas do trabalho")
-        table.add_row("6", "💰 Finanças", "[dim italic]Em breve[/dim italic]")
+        table.add_row("6", "💰 Finanças", "Gestão financeira pessoal")
         table.add_row("7", "📝 Notas", "[dim italic]Em breve[/dim italic]")
         table.add_row("8", "🎯 Hábitos", "[dim italic]Em breve[/dim italic]")
         table.add_row("0", "❌ Sair", "Encerrar o sistema")
@@ -75,6 +76,11 @@ class LifeOS:
         """Lança o módulo Encora"""
         encora_app = EncoraModule()
         encora_app.run()
+    
+    def launch_finances_module(self):
+        """Lança o módulo de finanças"""
+        finances_app = FinancesModule()
+        finances_app.run()
     
     def coming_soon(self, module_name):
         """Exibe mensagem de módulo em desenvolvimento"""
@@ -110,7 +116,7 @@ class LifeOS:
             elif choice == "5":
                 self.launch_encora_module()
             elif choice == "6":
-                self.coming_soon("Finanças")
+                self.launch_finances_module()
             elif choice == "7":
                 self.coming_soon("Notas")
             elif choice == "8":

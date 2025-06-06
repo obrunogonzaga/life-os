@@ -127,6 +127,18 @@ class DatabaseManager:
         
         return self.db[collection_name]
     
+    def collection(self, collection_name: str):
+        """
+        Alias para get_collection() - retorna uma coleção do MongoDB
+        
+        Args:
+            collection_name: Nome da coleção
+            
+        Returns:
+            Collection object ou None se não conectado
+        """
+        return self.get_collection(collection_name)
+    
     def create_index(self, collection_name: str, index_fields: List[tuple]):
         """
         Cria índices na coleção especificada
