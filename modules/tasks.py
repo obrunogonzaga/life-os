@@ -11,7 +11,7 @@ from rich import box
 from typing import List, Optional, Dict
 import os
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -1022,16 +1022,16 @@ class TasksModule:
         
         period_choice = IntPrompt.ask("\n[cyan]Escolha o período[/cyan]", default=2)
         
-        # Calcular datas
-        now = datetime.now()
+        # Calcular datas em UTC sem microsegundos para compatibilidade com a API
+        now = datetime.now(timezone.utc)
         since = None
-        
+
         if period_choice == 1:
-            since = now.replace(hour=0, minute=0, second=0).isoformat()
+            since = now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat().replace('+00:00', 'Z')
         elif period_choice == 2:
-            since = (now - timedelta(days=7)).isoformat()
+            since = (now - timedelta(days=7)).replace(microsecond=0).isoformat().replace('+00:00', 'Z')
         elif period_choice == 3:
-            since = (now - timedelta(days=30)).isoformat()
+            since = (now - timedelta(days=30)).replace(microsecond=0).isoformat().replace('+00:00', 'Z')
         
         completed = self.client.get_completed_tasks(since=since, limit=50)
         
