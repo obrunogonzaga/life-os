@@ -390,19 +390,106 @@ class FinanceClient:
             return False
 
     def excluir_transacao(self, transacao_id: str) -> bool:
-        """Exclui uma transação"""
+        """Exclui uma transação e corrige saldos/limites automaticamente"""
         try:
+            # Obter a transação antes de deletar para ajustar saldos
+            transacao = self.obter_transacao(transacao_id)
+            if not transacao:
+                return False
+            
+            # Deletar a transação
+            sucesso = False
             if self.db_manager.is_connected():
                 result = self.db_manager.collection(self.transacoes_collection).delete_one({"id": transacao_id})
-                return result.deleted_count > 0
+                sucesso = result.deleted_count > 0
             else:
                 data = self._load_fallback_data()
                 data["transacoes"] = [t for t in data["transacoes"] if t["id"] != transacao_id]
                 self._save_fallback_data(data)
-                return True
+                sucesso = True
+            
+            if sucesso:
+                # Reverter ajustes de saldo/limite
+                if transacao.conta_id:
+                    # Reverter saldo da conta (inverter o tipo da transação)
+                    tipo_reverso = TipoTransacao.CREDITO if transacao.tipo == TipoTransacao.DEBITO else TipoTransacao.DEBITO
+                    self._atualizar_saldo_conta(transacao.conta_id, transacao.valor, tipo_reverso)
+                
+                if transacao.cartao_id:
+                    # Restaurar limite do cartão
+                    self._restaurar_limite_cartao(transacao.cartao_id, transacao.valor)
+            
+            return sucesso
+            
         except Exception as e:
             print(f"Erro ao excluir transação: {e}")
             return False
+    
+    def excluir_multiplas_transacoes(self, transacao_ids: List[str]) -> Dict[str, Any]:
+        """Exclui múltiplas transações e retorna relatório"""
+        try:
+            resultado = {
+                'sucesso': True,
+                'total_solicitadas': len(transacao_ids),
+                'excluidas': 0,
+                'erros': []
+            }
+            
+            for transacao_id in transacao_ids:
+                try:
+                    if self.excluir_transacao(transacao_id):
+                        resultado['excluidas'] += 1
+                    else:
+                        resultado['erros'].append(f"Falha ao excluir transação {transacao_id[:8]}...")
+                except Exception as e:
+                    resultado['erros'].append(f"Erro ao excluir {transacao_id[:8]}...: {e}")
+            
+            # Se houve erros, marcar como não totalmente bem-sucedido
+            if resultado['erros']:
+                resultado['sucesso'] = False
+            
+            return resultado
+            
+        except Exception as e:
+            return {
+                'sucesso': False,
+                'total_solicitadas': len(transacao_ids),
+                'excluidas': 0,
+                'erros': [f"Erro geral: {e}"]
+            }
+    
+    def excluir_fatura_completa(self, cartao_id: str, mes_fatura: int, ano_fatura: int) -> Dict[str, Any]:
+        """Exclui todas as transações de uma fatura específica"""
+        try:
+            # Obter todas as transações da fatura
+            transacoes = self.obter_transacoes_fatura_cartao(cartao_id, mes_fatura, ano_fatura)
+            
+            if not transacoes:
+                return {
+                    'sucesso': True,
+                    'total_transacoes': 0,
+                    'excluidas': 0,
+                    'erros': []
+                }
+            
+            # Coletar IDs das transações
+            transacao_ids = [t.id for t in transacoes]
+            
+            # Excluir em lote
+            resultado = self.excluir_multiplas_transacoes(transacao_ids)
+            resultado['total_transacoes'] = len(transacoes)
+            resultado['mes_fatura'] = mes_fatura
+            resultado['ano_fatura'] = ano_fatura
+            
+            return resultado
+            
+        except Exception as e:
+            return {
+                'sucesso': False,
+                'total_transacoes': 0,
+                'excluidas': 0,
+                'erros': [f"Erro ao excluir fatura: {e}"]
+            }
 
     def _atualizar_saldo_conta(self, conta_id: str, valor: float, tipo: TipoTransacao):
         """Atualiza o saldo de uma conta"""
@@ -421,6 +508,32 @@ class FinanceClient:
         if cartao:
             novo_limite_disponivel = cartao.limite_disponivel - valor
             self.atualizar_cartao(cartao_id, limite_disponivel=novo_limite_disponivel)
+    
+    def _restaurar_limite_cartao(self, cartao_id: str, valor: float):
+        """Restaura o limite disponível de um cartão (usado na exclusão)"""
+        cartao = self.obter_cartao(cartao_id)
+        if cartao:
+            novo_limite_disponivel = cartao.limite_disponivel + valor
+            # Não permitir que o limite disponível exceda o limite total
+            novo_limite_disponivel = min(novo_limite_disponivel, cartao.limite)
+            self.atualizar_cartao(cartao_id, limite_disponivel=novo_limite_disponivel)
+    
+    def obter_transacao(self, transacao_id: str) -> Optional[Transacao]:
+        """Obtém uma transação específica pelo ID"""
+        try:
+            if self.db_manager.is_connected():
+                doc = self.db_manager.collection(self.transacoes_collection).find_one({"id": transacao_id})
+                if doc:
+                    return self._doc_to_transacao(doc)
+            else:
+                data = self._load_fallback_data()
+                for transacao_data in data["transacoes"]:
+                    if transacao_data["id"] == transacao_id:
+                        return self._dict_to_transacao(transacao_data)
+            return None
+        except Exception as e:
+            print(f"Erro ao obter transação: {e}")
+            return None
 
     # Métodos de consulta e relatórios
     def obter_transacoes_mes(self, ano: int, mes: int, 

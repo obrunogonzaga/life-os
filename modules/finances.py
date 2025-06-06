@@ -554,7 +554,7 @@ class FinancesModule:
             self.console.print("2. 📋 Listar Transações")
             self.console.print("3. 🔍 Buscar Transações")
             self.console.print("4. ✏️ Editar Transação")
-            self.console.print("5. 🗑️ Excluir Transação")
+            self.console.print("5. 🗑️ Excluir Transações")
             self.console.print("6. 📊 Transações por Categoria")
             self.console.print("M. 🔙 Voltar")
             
@@ -571,7 +571,7 @@ class FinancesModule:
             elif opcao == "4":
                 self._editar_transacao()
             elif opcao == "5":
-                self._excluir_transacao()
+                self._menu_excluir_transacoes()
             elif opcao == "6":
                 self._transacoes_por_categoria()
 
@@ -1059,9 +1059,494 @@ class FinancesModule:
         self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
         input()
 
-    def _excluir_transacao(self):
-        """Exclui uma transação"""
-        self.console.print("[yellow]Funcionalidade em desenvolvimento...[/yellow]")
+    def _menu_excluir_transacoes(self):
+        """Menu de opções para exclusão de transações"""
+        while True:
+            self.console.clear()
+            self.console.print(Panel("[bold red]🗑️ Excluir Transações[/bold red]", style="red"))
+            
+            self.console.print("1. 🎯 Excluir transação individual")
+            self.console.print("2. 📋 Excluir múltiplas transações (seleção)")
+            self.console.print("3. 💳 Excluir por fatura de cartão")
+            self.console.print("4. 🧹 Excluir fatura completa")
+            self.console.print("M. 🔙 Voltar")
+            
+            opcao = Prompt.ask("Escolha uma opção", choices=["1", "2", "3", "4", "M", "m"])
+            
+            if opcao.upper() == "M":
+                break
+            elif opcao == "1":
+                self._excluir_transacao_individual()
+            elif opcao == "2":
+                self._excluir_transacoes_multiplas()
+            elif opcao == "3":
+                self._excluir_transacoes_por_fatura()
+            elif opcao == "4":
+                self._excluir_fatura_completa()
+    
+    def _excluir_transacao_individual(self):
+        """Exclui uma transação específica"""
+        self.console.clear()
+        self.console.print(Panel("[bold red]🎯 Excluir Transação Individual[/bold red]", style="red"))
+        
+        try:
+            # Listar transações recentes
+            transacoes = self.client.listar_transacoes()
+            
+            if not transacoes:
+                self.console.print("[yellow]Nenhuma transação encontrada.[/yellow]")
+                self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+                input()
+                return
+            
+            # Mostrar transações
+            self.console.print("[bold cyan]Transações disponíveis:[/bold cyan]")
+            transacoes_table = Table(show_header=True, header_style="bold red")
+            transacoes_table.add_column("#", style="yellow", width=3)
+            transacoes_table.add_column("Data", style="cyan", width=12)
+            transacoes_table.add_column("Descrição", style="white", width=30)
+            transacoes_table.add_column("Valor", style="green", justify="right", width=12)
+            transacoes_table.add_column("Origem", style="blue", width=15)
+            
+            for i, transacao in enumerate(transacoes[:20], 1):  # Mostrar apenas 20
+                # Determinar origem
+                origem = "N/A"
+                if transacao.conta_id:
+                    conta = self.client.obter_conta(transacao.conta_id)
+                    origem = conta.nome if conta else "Conta"
+                elif transacao.cartao_id:
+                    cartao = self.client.obter_cartao(transacao.cartao_id)
+                    origem = cartao.nome if cartao else "Cartão"
+                
+                transacoes_table.add_row(
+                    str(i),
+                    transacao.data_transacao[:10],
+                    transacao.descricao[:30],
+                    f"R$ {transacao.valor:,.2f}",
+                    origem
+                )
+            
+            self.console.print(transacoes_table)
+            
+            if len(transacoes) > 20:
+                self.console.print(f"[dim]Mostrando 20 de {len(transacoes)} transações[/dim]")
+            
+            # Selecionar transação
+            indice = IntPrompt.ask("Número da transação para excluir (0 para cancelar)", default=0)
+            
+            if indice == 0:
+                self.console.print("[yellow]Operação cancelada.[/yellow]")
+                self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+                input()
+                return
+            
+            if not (1 <= indice <= min(20, len(transacoes))):
+                self.console.print("[red]Número inválido.[/red]")
+                self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+                input()
+                return
+            
+            transacao_selecionada = transacoes[indice - 1]
+            
+            # Confirmar exclusão
+            self.console.print(f"\n[bold yellow]Confirmar exclusão:[/bold yellow]")
+            self.console.print(f"Transação: {transacao_selecionada.descricao}")
+            self.console.print(f"Valor: R$ {transacao_selecionada.valor:,.2f}")
+            self.console.print(f"Data: {transacao_selecionada.data_transacao[:10]}")
+            
+            if Confirm.ask("\nTem certeza que deseja excluir esta transação?"):
+                sucesso = self.client.excluir_transacao(transacao_selecionada.id)
+                
+                if sucesso:
+                    self.console.print(f"[green]✅ Transação excluída com sucesso![/green]")
+                    self.console.print(f"[blue]💡 Limites/saldos ajustados automaticamente[/blue]")
+                else:
+                    self.console.print("[red]❌ Erro ao excluir transação[/red]")
+            else:
+                self.console.print("[yellow]Exclusão cancelada.[/yellow]")
+                
+        except Exception as e:
+            self.console.print(f"[red]Erro: {e}[/red]")
+        
+        self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+        input()
+    
+    def _excluir_transacoes_multiplas(self):
+        """Exclui múltiplas transações por seleção"""
+        self.console.clear()
+        self.console.print(Panel("[bold red]📋 Excluir Múltiplas Transações[/bold red]", style="red"))
+        
+        try:
+            # Listar transações recentes
+            transacoes = self.client.listar_transacoes()
+            
+            if not transacoes:
+                self.console.print("[yellow]Nenhuma transação encontrada.[/yellow]")
+                self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+                input()
+                return
+            
+            # Mostrar transações
+            self.console.print("[bold cyan]Transações disponíveis:[/bold cyan]")
+            transacoes_table = Table(show_header=True, header_style="bold red")
+            transacoes_table.add_column("#", style="yellow", width=3)
+            transacoes_table.add_column("Data", style="cyan", width=12)
+            transacoes_table.add_column("Descrição", style="white", width=25)
+            transacoes_table.add_column("Valor", style="green", justify="right", width=12)
+            transacoes_table.add_column("Origem", style="blue", width=15)
+            
+            for i, transacao in enumerate(transacoes[:30], 1):  # Mostrar até 30
+                # Determinar origem
+                origem = "N/A"
+                if transacao.conta_id:
+                    conta = self.client.obter_conta(transacao.conta_id)
+                    origem = conta.nome if conta else "Conta"
+                elif transacao.cartao_id:
+                    cartao = self.client.obter_cartao(transacao.cartao_id)
+                    origem = cartao.nome if cartao else "Cartão"
+                
+                transacoes_table.add_row(
+                    str(i),
+                    transacao.data_transacao[:10],
+                    transacao.descricao[:25],
+                    f"R$ {transacao.valor:,.2f}",
+                    origem
+                )
+            
+            self.console.print(transacoes_table)
+            
+            if len(transacoes) > 30:
+                self.console.print(f"[dim]Mostrando 30 de {len(transacoes)} transações[/dim]")
+            
+            # Selecionar múltiplas transações
+            self.console.print("\n[bold cyan]Seleção múltipla:[/bold cyan]")
+            self.console.print("[dim]Digite os números separados por vírgula (ex: 1,3,5-8,10)[/dim]")
+            self.console.print("[dim]Ou digite 'todos' para selecionar todas visíveis[/dim]")
+            
+            selecao = Prompt.ask("Números das transações para excluir")
+            
+            if selecao.lower() == "todos":
+                indices_selecionados = list(range(1, min(31, len(transacoes) + 1)))
+            else:
+                try:
+                    indices_selecionados = []
+                    for parte in selecao.split(','):
+                        parte = parte.strip()
+                        if '-' in parte:
+                            inicio, fim = map(int, parte.split('-'))
+                            indices_selecionados.extend(range(inicio, fim + 1))
+                        else:
+                            indices_selecionados.append(int(parte))
+                    
+                    # Remover duplicatas e ordenar
+                    indices_selecionados = sorted(set(indices_selecionados))
+                    
+                except ValueError:
+                    self.console.print("[red]Formato inválido.[/red]")
+                    self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+                    input()
+                    return
+            
+            # Validar índices
+            indices_validos = [i for i in indices_selecionados if 1 <= i <= min(30, len(transacoes))]
+            
+            if not indices_validos:
+                self.console.print("[red]Nenhuma transação válida selecionada.[/red]")
+                self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+                input()
+                return
+            
+            transacoes_selecionadas = [transacoes[i - 1] for i in indices_validos]
+            
+            # Mostrar resumo da seleção
+            total_valor = sum(t.valor for t in transacoes_selecionadas)
+            self.console.print(f"\n[bold yellow]Resumo da seleção:[/bold yellow]")
+            self.console.print(f"Transações selecionadas: {len(transacoes_selecionadas)}")
+            self.console.print(f"Valor total: R$ {total_valor:,.2f}")
+            
+            # Confirmar exclusão
+            if Confirm.ask(f"\nTem certeza que deseja excluir {len(transacoes_selecionadas)} transações?"):
+                transacao_ids = [t.id for t in transacoes_selecionadas]
+                resultado = self.client.excluir_multiplas_transacoes(transacao_ids)
+                
+                # Exibir resultado
+                self.console.print(f"\n[bold cyan]Resultado da exclusão:[/bold cyan]")
+                self.console.print(f"Solicitadas: {resultado['total_solicitadas']}")
+                self.console.print(f"[green]Excluídas: {resultado['excluidas']}[/green]")
+                
+                if resultado['erros']:
+                    self.console.print(f"[red]Erros: {len(resultado['erros'])}[/red]")
+                    for erro in resultado['erros'][:3]:  # Mostrar apenas os primeiros 3 erros
+                        self.console.print(f"  - {erro}")
+                
+                if resultado['sucesso']:
+                    self.console.print(f"[green]✅ Exclusão concluída com sucesso![/green]")
+                    self.console.print(f"[blue]💡 Limites/saldos ajustados automaticamente[/blue]")
+                else:
+                    self.console.print(f"[yellow]⚠️ Exclusão parcialmente bem-sucedida[/yellow]")
+            else:
+                self.console.print("[yellow]Exclusão cancelada.[/yellow]")
+                
+        except Exception as e:
+            self.console.print(f"[red]Erro: {e}[/red]")
+        
+        self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+        input()
+    
+    def _excluir_transacoes_por_fatura(self):
+        """Exclui transações selecionadas de uma fatura específica"""
+        self.console.clear()
+        self.console.print(Panel("[bold red]💳 Excluir Transações por Fatura[/bold red]", style="red"))
+        
+        try:
+            # Selecionar cartão e fatura (reutilizar lógica existente)
+            cartoes = self.client.listar_cartoes()
+            if not cartoes:
+                self.console.print("[yellow]Nenhum cartão cadastrado.[/yellow]")
+                self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+                input()
+                return
+            
+            # Selecionar cartão
+            self.console.print("[bold cyan]Cartões disponíveis:[/bold cyan]")
+            for i, cartao in enumerate(cartoes, 1):
+                self.console.print(f"{i}. {cartao.nome} - {cartao.banco}")
+            
+            indice_cartao = IntPrompt.ask("Número do cartão", default=1) - 1
+            if not (0 <= indice_cartao < len(cartoes)):
+                self.console.print("[red]Cartão inválido.[/red]")
+                self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+                input()
+                return
+            
+            cartao = cartoes[indice_cartao]
+            
+            # Selecionar ano e listar faturas
+            hoje = datetime.now()
+            ano_fatura = IntPrompt.ask("Ano das faturas", default=hoje.year)
+            
+            faturas = self.client.listar_faturas_cartao(cartao.id, ano_fatura)
+            
+            if not faturas:
+                self.console.print(f"[yellow]Nenhuma fatura encontrada para {ano_fatura}.[/yellow]")
+                self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+                input()
+                return
+            
+            # Mostrar faturas
+            self.console.print(f"\n[bold cyan]Faturas de {cartao.nome} - {ano_fatura}:[/bold cyan]")
+            for i, fatura in enumerate(faturas, 1):
+                self.console.print(f"{i}. {fatura['mes']:02d}/{fatura['ano']} - {fatura['total_transacoes']} transações - R$ {fatura['total_valor']:,.2f}")
+            
+            indice_fatura = IntPrompt.ask("Número da fatura", default=1) - 1
+            if not (0 <= indice_fatura < len(faturas)):
+                self.console.print("[red]Fatura inválida.[/red]")
+                self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+                input()
+                return
+            
+            fatura_selecionada = faturas[indice_fatura]
+            transacoes_fatura = fatura_selecionada['transacoes']
+            
+            # Mostrar transações da fatura
+            self.console.print(f"\n[bold cyan]Transações da fatura {fatura_selecionada['mes']:02d}/{fatura_selecionada['ano']}:[/bold cyan]")
+            
+            transacoes_table = Table(show_header=True, header_style="bold red")
+            transacoes_table.add_column("#", style="yellow", width=3)
+            transacoes_table.add_column("Data", style="cyan", width=12)
+            transacoes_table.add_column("Descrição", style="white", width=30)
+            transacoes_table.add_column("Valor", style="green", justify="right", width=12)
+            
+            for i, transacao in enumerate(transacoes_fatura, 1):
+                transacoes_table.add_row(
+                    str(i),
+                    transacao.data_transacao[:10],
+                    transacao.descricao[:30],
+                    f"R$ {transacao.valor:,.2f}"
+                )
+            
+            self.console.print(transacoes_table)
+            
+            # Seleção de transações (similar ao método anterior)
+            self.console.print("\n[bold cyan]Seleção:[/bold cyan]")
+            self.console.print("[dim]Digite os números separados por vírgula (ex: 1,3,5-8,10)[/dim]")
+            self.console.print("[dim]Ou digite 'todos' para selecionar todas[/dim]")
+            
+            selecao = Prompt.ask("Números das transações para excluir")
+            
+            if selecao.lower() == "todos":
+                transacoes_selecionadas = transacoes_fatura
+            else:
+                try:
+                    indices_selecionados = []
+                    for parte in selecao.split(','):
+                        parte = parte.strip()
+                        if '-' in parte:
+                            inicio, fim = map(int, parte.split('-'))
+                            indices_selecionados.extend(range(inicio, fim + 1))
+                        else:
+                            indices_selecionados.append(int(parte))
+                    
+                    indices_selecionados = sorted(set(indices_selecionados))
+                    indices_validos = [i for i in indices_selecionados if 1 <= i <= len(transacoes_fatura)]
+                    transacoes_selecionadas = [transacoes_fatura[i - 1] for i in indices_validos]
+                    
+                except ValueError:
+                    self.console.print("[red]Formato inválido.[/red]")
+                    self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+                    input()
+                    return
+            
+            if not transacoes_selecionadas:
+                self.console.print("[red]Nenhuma transação selecionada.[/red]")
+                self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+                input()
+                return
+            
+            # Confirmar e executar exclusão
+            total_valor = sum(t.valor for t in transacoes_selecionadas)
+            self.console.print(f"\n[bold yellow]Confirmar exclusão:[/bold yellow]")
+            self.console.print(f"Fatura: {fatura_selecionada['mes']:02d}/{fatura_selecionada['ano']}")
+            self.console.print(f"Transações: {len(transacoes_selecionadas)}")
+            self.console.print(f"Valor total: R$ {total_valor:,.2f}")
+            
+            if Confirm.ask("\nConfirmar exclusão?"):
+                transacao_ids = [t.id for t in transacoes_selecionadas]
+                resultado = self.client.excluir_multiplas_transacoes(transacao_ids)
+                
+                self.console.print(f"\n[bold cyan]Resultado:[/bold cyan]")
+                self.console.print(f"[green]Excluídas: {resultado['excluidas']}/{resultado['total_solicitadas']}[/green]")
+                
+                if resultado['erros']:
+                    self.console.print(f"[red]Erros: {len(resultado['erros'])}[/red]")
+                
+                if resultado['sucesso']:
+                    self.console.print(f"[green]✅ Exclusão concluída![/green]")
+                else:
+                    self.console.print(f"[yellow]⚠️ Exclusão parcial[/yellow]")
+            else:
+                self.console.print("[yellow]Exclusão cancelada.[/yellow]")
+                
+        except Exception as e:
+            self.console.print(f"[red]Erro: {e}[/red]")
+        
+        self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+        input()
+    
+    def _excluir_fatura_completa(self):
+        """Exclui uma fatura completa de um cartão"""
+        self.console.clear()
+        self.console.print(Panel("[bold red]🧹 Excluir Fatura Completa[/bold red]", style="red"))
+        
+        try:
+            # Selecionar cartão
+            cartoes = self.client.listar_cartoes()
+            if not cartoes:
+                self.console.print("[yellow]Nenhum cartão cadastrado.[/yellow]")
+                self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+                input()
+                return
+            
+            self.console.print("[bold cyan]Cartões disponíveis:[/bold cyan]")
+            for i, cartao in enumerate(cartoes, 1):
+                self.console.print(f"{i}. {cartao.nome} - {cartao.banco}")
+            
+            indice_cartao = IntPrompt.ask("Número do cartão", default=1) - 1
+            if not (0 <= indice_cartao < len(cartoes)):
+                self.console.print("[red]Cartão inválido.[/red]")
+                self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+                input()
+                return
+            
+            cartao = cartoes[indice_cartao]
+            
+            # Selecionar ano e listar faturas
+            hoje = datetime.now()
+            ano_fatura = IntPrompt.ask("Ano das faturas", default=hoje.year)
+            
+            faturas = self.client.listar_faturas_cartao(cartao.id, ano_fatura)
+            
+            if not faturas:
+                self.console.print(f"[yellow]Nenhuma fatura encontrada para {ano_fatura}.[/yellow]")
+                self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+                input()
+                return
+            
+            # Mostrar faturas com detalhes
+            self.console.print(f"\n[bold cyan]Faturas de {cartao.nome} - {ano_fatura}:[/bold cyan]")
+            
+            faturas_table = Table(show_header=True, header_style="bold red")
+            faturas_table.add_column("#", style="yellow", width=3)
+            faturas_table.add_column("Fatura", style="cyan", width=10)
+            faturas_table.add_column("Transações", style="blue", justify="center", width=12)
+            faturas_table.add_column("Total", style="green", justify="right", width=15)
+            faturas_table.add_column("Compartilhado", style="magenta", justify="right", width=15)
+            
+            for i, fatura in enumerate(faturas, 1):
+                compartilhado_str = f"R$ {fatura['total_compartilhado']:,.2f}" if fatura['total_compartilhado'] > 0 else "-"
+                faturas_table.add_row(
+                    str(i),
+                    f"{fatura['mes']:02d}/{fatura['ano']}",
+                    str(fatura['total_transacoes']),
+                    f"R$ {fatura['total_valor']:,.2f}",
+                    compartilhado_str
+                )
+            
+            self.console.print(faturas_table)
+            
+            # Selecionar fatura
+            indice_fatura = IntPrompt.ask("Número da fatura para excluir completamente", default=1) - 1
+            if not (0 <= indice_fatura < len(faturas)):
+                self.console.print("[red]Fatura inválida.[/red]")
+                self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+                input()
+                return
+            
+            fatura_selecionada = faturas[indice_fatura]
+            
+            # Confirmação com detalhes
+            self.console.print(f"\n[bold red]⚠️ ATENÇÃO - EXCLUSÃO PERMANENTE ⚠️[/bold red]")
+            self.console.print(f"[bold yellow]Fatura selecionada:[/bold yellow]")
+            self.console.print(f"Cartão: {cartao.nome}")
+            self.console.print(f"Fatura: {fatura_selecionada['mes']:02d}/{fatura_selecionada['ano']}")
+            self.console.print(f"Transações: {fatura_selecionada['total_transacoes']}")
+            self.console.print(f"Valor total: R$ {fatura_selecionada['total_valor']:,.2f}")
+            
+            if fatura_selecionada['total_compartilhado'] > 0:
+                self.console.print(f"Valor compartilhado: R$ {fatura_selecionada['total_compartilhado']:,.2f}")
+            
+            self.console.print(f"\n[red]Esta ação irá excluir TODAS as {fatura_selecionada['total_transacoes']} transações da fatura![/red]")
+            
+            if Confirm.ask("\nTem CERTEZA ABSOLUTA que deseja excluir esta fatura completa?"):
+                # Executar exclusão
+                resultado = self.client.excluir_fatura_completa(
+                    cartao.id, 
+                    fatura_selecionada['mes'], 
+                    fatura_selecionada['ano']
+                )
+                
+                # Exibir resultado detalhado
+                self.console.print(f"\n[bold cyan]Resultado da exclusão:[/bold cyan]")
+                self.console.print(f"Fatura: {resultado['mes_fatura']:02d}/{resultado['ano_fatura']}")
+                self.console.print(f"Transações na fatura: {resultado['total_transacoes']}")
+                self.console.print(f"[green]Transações excluídas: {resultado['excluidas']}[/green]")
+                
+                if resultado['erros']:
+                    self.console.print(f"[red]Erros ocorridos: {len(resultado['erros'])}[/red]")
+                    for erro in resultado['erros'][:3]:
+                        self.console.print(f"  - {erro}")
+                
+                if resultado['sucesso']:
+                    self.console.print(f"\n[green]✅ Fatura {resultado['mes_fatura']:02d}/{resultado['ano_fatura']} excluída completamente![/green]")
+                    self.console.print(f"[blue]💡 Limite do cartão restaurado automaticamente[/blue]")
+                else:
+                    self.console.print(f"\n[yellow]⚠️ Exclusão parcialmente bem-sucedida[/yellow]")
+            else:
+                self.console.print("[yellow]Exclusão cancelada.[/yellow]")
+                
+        except Exception as e:
+            self.console.print(f"[red]Erro: {e}[/red]")
+        
         self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
         input()
 
