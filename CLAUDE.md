@@ -194,6 +194,41 @@ class TodoistLabel:
 - **API Integration**: RESTful clients for external services (Todoist REST v2 + Sync v9)
 - **Rich Terminal UI**: Advanced terminal interfaces with formatting and interactivity
 
+## 🔀 Git Workflow - REGRAS IMPORTANTES
+
+⚠️ **REGRA CRÍTICA**: NUNCA fazer push direto na branch main!
+
+### Workflow Obrigatório para Mudanças
+
+#### 1. Sempre criar uma nova branch para mudanças
+```bash
+# Criar nova branch antes de qualquer alteração
+git checkout -b feature/nome-da-feature
+# ou
+git checkout -b fix/nome-do-bug
+```
+
+#### 2. Fazer commit na branch
+```bash
+git add .
+git commit -m "sua mensagem de commit"
+```
+
+#### 3. Fazer push da branch (não da main)
+```bash
+git push origin nome-da-branch
+```
+
+#### 4. Criar Pull Request
+- Usar GitHub interface ou `gh pr create`
+- Fazer merge via Pull Request, não push direto
+
+### Exemplos de Nomes de Branch
+- `feature/todoist-api-fix` - Para novas funcionalidades
+- `fix/completed-tasks-endpoint` - Para correções de bugs
+- `docs/update-readme` - Para atualizações de documentação
+- `refactor/database-client` - Para refatorações
+
 ## Comandos para Execução
 
 ### 🚀 Início Rápido
