@@ -106,10 +106,11 @@ class TasksModule:
             self._display_header()
             console.print(Panel("📝 GERENCIAMENTO DE TAREFAS", style="cyan"))
             
-            # Lista tarefas ativas
+            # Lista tarefas ativas (filtradas)
             tasks = self.client.get_tasks()
-            if tasks:
-                self._display_tasks(tasks)
+            filtered_tasks = self._filter_excluded_projects(tasks)
+            if filtered_tasks:
+                self._display_tasks(filtered_tasks)
             else:
                 console.print("\n[yellow]Nenhuma tarefa encontrada.[/yellow]")
             
@@ -132,13 +133,13 @@ class TasksModule:
             if choice == "1":
                 self._add_task()
             elif choice == "2":
-                self._edit_task(tasks)
+                self._edit_task(filtered_tasks)
             elif choice == "3":
-                self._complete_task(tasks)
+                self._complete_task(filtered_tasks)
             elif choice == "4":
-                self._delete_task(tasks)
+                self._delete_task(filtered_tasks)
             elif choice == "5":
-                self._manage_task_labels(tasks)
+                self._manage_task_labels(filtered_tasks)
             elif choice == "6":
                 continue  # Atualiza a lista
             elif choice == "7":
@@ -156,6 +157,32 @@ class TasksModule:
             else:
                 console.print("[red]Opção inválida![/red]")
                 console.input("\nPressione Enter para continuar...")
+    
+    def _filter_excluded_projects(self, tasks: List[TodoistTask]) -> List[TodoistTask]:
+        """Filtra tarefas excluindo projetos específicos"""
+        # Projetos a serem excluídos da visualização
+        excluded_project_names = [
+            "talvez [1 dia]",
+            "books", 
+            "Lista de tarefas Alexa",
+            "Lista de Compras do Alexa"
+        ]
+        
+        # Busca projetos para obter IDs dos nomes
+        projects = self.client.get_projects()
+        excluded_project_ids = set()
+        
+        for project in projects:
+            if project.name in excluded_project_names:
+                excluded_project_ids.add(project.id)
+        
+        # Filtra tarefas excluindo os projetos especificados
+        filtered_tasks = []
+        for task in tasks:
+            if task.project_id not in excluded_project_ids:
+                filtered_tasks.append(task)
+        
+        return filtered_tasks
     
     def _display_tasks(self, tasks: List[TodoistTask], show_project: bool = True):
         """Exibe lista de tarefas"""
