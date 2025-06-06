@@ -7,6 +7,7 @@ from rich.layout import Layout
 from rich.align import Align
 from datetime import datetime, timedelta
 from typing import Optional, List
+from pathlib import Path
 
 from utils.finance_client import FinanceClient
 from utils.finance_models import (
@@ -752,43 +753,52 @@ class FinancesModule:
                 self.console.print(f"[yellow]Nenhuma transação compartilhada encontrada para {hoje.strftime('%B/%Y')}.[/yellow]")
             else:
                 # Resumo
-                total_valor = sum(t.valor for t in transacoes if t.tipo == TipoTransacao.DEBITO)
+                total_debitos = sum(t.valor for t in transacoes if t.tipo == TipoTransacao.DEBITO)
+                total_creditos = sum(t.valor for t in transacoes if t.tipo == TipoTransacao.CREDITO)
+                saldo_compartilhado = total_creditos - total_debitos
+                
                 self.console.print(f"[bold cyan]Período:[/bold cyan] {hoje.strftime('%B/%Y')}")
                 self.console.print(f"[bold cyan]Total de transações:[/bold cyan] {len(transacoes)}")
-                self.console.print(f"[bold cyan]Valor total:[/bold cyan] R$ {total_valor:,.2f}")
-                self.console.print(f"[bold cyan]Valor dividido (50%):[/bold cyan] R$ {total_valor/2:,.2f}")
+                self.console.print(f"[bold red]Gastos compartilhados:[/bold red] R$ {total_debitos:,.2f}")
+                self.console.print(f"[bold green]Receitas compartilhadas:[/bold green] R$ {total_creditos:,.2f}")
+                self.console.print(f"[bold cyan]Saldo líquido:[/bold cyan] R$ {saldo_compartilhado:,.2f}")
+                self.console.print(f"[bold cyan]Valor dividido (50%):[/bold cyan] R$ {saldo_compartilhado/2:,.2f}")
                 self.console.print()
                 
                 # Tabela das transações
                 table = Table(show_header=True, header_style="bold magenta")
                 table.add_column("Data", style="cyan", width=12)
-                table.add_column("Descrição", style="white", width=30)
+                table.add_column("Descrição", style="white", width=25)
                 table.add_column("Valor", style="green", justify="right", width=12)
+                table.add_column("Tipo", style="yellow", justify="center", width=8)
                 table.add_column("Categoria", style="yellow", width=15)
                 table.add_column("Origem", style="blue", width=15)
                 
                 for transacao in transacoes:
-                    if transacao.tipo == TipoTransacao.DEBITO:  # Apenas gastos
-                        # Determinar origem
-                        origem = "N/A"
-                        if transacao.conta_id:
-                            conta = self.client.obter_conta(transacao.conta_id)
-                            origem = conta.nome if conta else "Conta"
-                        elif transacao.cartao_id:
-                            cartao = self.client.obter_cartao(transacao.cartao_id)
-                            origem = cartao.nome if cartao else "Cartão"
-                        
-                        valor_str = f"R$ {transacao.valor:,.2f}"
-                        if transacao.eh_parcelada:
-                            valor_str += f" ({len(transacao.parcelamento)}x)"
-                        
-                        table.add_row(
-                            transacao.data_transacao[:10],
-                            transacao.descricao,
-                            valor_str,
-                            transacao.categoria or "N/A",
-                            origem
-                        )
+                    # Mostrar todas as transações compartilhadas
+                    tipo_icon = "📤" if transacao.tipo == TipoTransacao.DEBITO else "📥"
+                    
+                    # Determinar origem
+                    origem = "N/A"
+                    if transacao.conta_id:
+                        conta = self.client.obter_conta(transacao.conta_id)
+                        origem = conta.nome if conta else "Conta"
+                    elif transacao.cartao_id:
+                        cartao = self.client.obter_cartao(transacao.cartao_id)
+                        origem = cartao.nome if cartao else "Cartão"
+                    
+                    valor_str = f"R$ {transacao.valor:,.2f}"
+                    if transacao.eh_parcelada:
+                        valor_str += f" ({len(transacao.parcelamento)}x)"
+                    
+                    table.add_row(
+                        transacao.data_transacao[:10],
+                        transacao.descricao,
+                        valor_str,
+                        tipo_icon,
+                        transacao.categoria or "N/A",
+                        origem
+                    )
                 
                 self.console.print(table)
                 
@@ -812,6 +822,146 @@ class FinancesModule:
 
     def _importar_exportar(self):
         """Menu de importação e exportação de dados"""
+        while True:
+            self.console.clear()
+            self.console.print(Panel("[bold blue]📤 Importar/Exportar Dados[/bold blue]", style="blue"))
+            
+            self.console.print("1. 📥 Importar CSV de Cartão")
+            self.console.print("2. 📤 Exportar Transações")
+            self.console.print("3. 📊 Histórico de Importações")
+            self.console.print("M. 🔙 Voltar")
+            
+            opcao = Prompt.ask("Escolha uma opção", choices=["1", "2", "3", "M", "m"])
+            
+            if opcao.upper() == "M":
+                break
+            elif opcao == "1":
+                self._importar_csv_cartao()
+            elif opcao == "2":
+                self._exportar_transacoes()
+            elif opcao == "3":
+                self._historico_importacoes()
+
+    def _importar_csv_cartao(self):
+        """Importa transações de arquivo CSV de cartão"""
+        self.console.clear()
+        self.console.print(Panel("[bold green]📥 Importar CSV de Cartão[/bold green]", style="green"))
+        
+        try:
+            # Listar cartões disponíveis
+            cartoes = self.client.listar_cartoes()
+            if not cartoes:
+                self.console.print("[yellow]Nenhum cartão cadastrado. Cadastre um cartão primeiro.[/yellow]")
+                self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+                input()
+                return
+            
+            # Selecionar cartão
+            self.console.print("[bold cyan]Cartões disponíveis:[/bold cyan]")
+            for i, cartao in enumerate(cartoes, 1):
+                compartilhado_icon = "👫" if cartao.compartilhado_com_alzi else "👤"
+                self.console.print(f"{i}. {cartao.nome} - {cartao.banco} {compartilhado_icon}")
+            
+            indice_cartao = IntPrompt.ask("Número do cartão", default=1) - 1
+            if not (0 <= indice_cartao < len(cartoes)):
+                self.console.print("[red]Cartão inválido.[/red]")
+                self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+                input()
+                return
+            
+            cartao_selecionado = cartoes[indice_cartao]
+            
+            # Solicitar caminho do arquivo
+            arquivo_path = Prompt.ask("Caminho do arquivo CSV")
+            
+            if not arquivo_path or not Path(arquivo_path).exists():
+                self.console.print("[red]Arquivo não encontrado.[/red]")
+                self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+                input()
+                return
+            
+            # Detectar formato
+            self.console.print("\n[yellow]Detectando formato do arquivo...[/yellow]")
+            formato = self.client.detectar_formato_csv(arquivo_path)
+            
+            if not formato:
+                self.console.print("[red]Formato do arquivo não reconhecido.[/red]")
+                self.console.print("[dim]Formatos suportados: Bradesco[/dim]")
+                self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+                input()
+                return
+            
+            self.console.print(f"[green]✓ Formato detectado: {formato.upper()}[/green]")
+            
+            if formato != "bradesco":
+                self.console.print(f"[yellow]⚠️ Apenas formato Bradesco suportado no momento.[/yellow]")
+                self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+                input()
+                return
+            
+            # Confirmar importação
+            compartilhado_info = "Sim" if cartao_selecionado.compartilhado_com_alzi else "Não"
+            self.console.print(f"\n[bold cyan]Resumo da importação:[/bold cyan]")
+            self.console.print(f"Cartão: {cartao_selecionado.nome} - {cartao_selecionado.banco}")
+            self.console.print(f"Compartilhado com Alzi: {compartilhado_info}")
+            self.console.print(f"Arquivo: {arquivo_path}")
+            self.console.print(f"Formato: {formato.upper()}")
+            
+            if not Confirm.ask("\nConfirmar importação?"):
+                self.console.print("[yellow]Importação cancelada.[/yellow]")
+                self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+                input()
+                return
+            
+            # Realizar importação
+            self.console.print("\n[yellow]Processando arquivo...[/yellow]")
+            resultado = self.client.importar_transacoes_csv(arquivo_path, cartao_selecionado.id)
+            
+            # Exibir resultado
+            self.console.print("\n" + "="*60)
+            if resultado['sucesso']:
+                self.console.print("[bold green]✓ IMPORTAÇÃO CONCLUÍDA[/bold green]")
+                self.console.print(f"[cyan]Total de linhas processadas:[/cyan] {resultado['total_linhas']}")
+                self.console.print(f"[cyan]Transações encontradas:[/cyan] {resultado['transacoes_encontradas']}")
+                self.console.print(f"[green]Transações importadas:[/green] {resultado['transacoes_importadas']}")
+                
+                # Verificar se houve duplicatas
+                duplicatas = resultado['transacoes_encontradas'] - resultado['transacoes_importadas']
+                if duplicatas > 0:
+                    self.console.print(f"[yellow]Transações duplicadas (ignoradas):[/yellow] {duplicatas}")
+                
+                # Exibir erros se houver
+                if resultado.get('erros'):
+                    self.console.print(f"\n[red]Erros encontrados ({len(resultado['erros'])}):[/red]")
+                    for erro in resultado['erros'][:5]:  # Mostrar apenas os primeiros 5
+                        self.console.print(f"  - {erro}")
+                    if len(resultado['erros']) > 5:
+                        self.console.print(f"  ... e mais {len(resultado['erros']) - 5} erros")
+                
+                # Informar sobre CSV limpo
+                if resultado.get('csv_limpo_path'):
+                    self.console.print(f"\n[blue]📄 CSV limpo gerado:[/blue] {resultado['csv_limpo_path']}")
+                
+            else:
+                self.console.print("[bold red]✗ ERRO NA IMPORTAÇÃO[/bold red]")
+                self.console.print(f"[red]Erro:[/red] {resultado.get('erro', 'Erro desconhecido')}")
+            
+            self.console.print("="*60)
+            
+        except Exception as e:
+            self.console.print(f"[red]Erro durante a importação: {e}[/red]")
+        
+        self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+        input()
+
+    def _exportar_transacoes(self):
+        """Exporta transações para CSV"""
+        self.console.print("[yellow]Funcionalidade em desenvolvimento...[/yellow]")
+        self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+        input()
+
+    def _historico_importacoes(self):
+        """Mostra histórico de importações"""
         self.console.print("[yellow]Funcionalidade em desenvolvimento...[/yellow]")
         self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
         input()
