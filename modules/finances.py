@@ -752,43 +752,52 @@ class FinancesModule:
                 self.console.print(f"[yellow]Nenhuma transação compartilhada encontrada para {hoje.strftime('%B/%Y')}.[/yellow]")
             else:
                 # Resumo
-                total_valor = sum(t.valor for t in transacoes if t.tipo == TipoTransacao.DEBITO)
+                total_debitos = sum(t.valor for t in transacoes if t.tipo == TipoTransacao.DEBITO)
+                total_creditos = sum(t.valor for t in transacoes if t.tipo == TipoTransacao.CREDITO)
+                saldo_compartilhado = total_creditos - total_debitos
+                
                 self.console.print(f"[bold cyan]Período:[/bold cyan] {hoje.strftime('%B/%Y')}")
                 self.console.print(f"[bold cyan]Total de transações:[/bold cyan] {len(transacoes)}")
-                self.console.print(f"[bold cyan]Valor total:[/bold cyan] R$ {total_valor:,.2f}")
-                self.console.print(f"[bold cyan]Valor dividido (50%):[/bold cyan] R$ {total_valor/2:,.2f}")
+                self.console.print(f"[bold red]Gastos compartilhados:[/bold red] R$ {total_debitos:,.2f}")
+                self.console.print(f"[bold green]Receitas compartilhadas:[/bold green] R$ {total_creditos:,.2f}")
+                self.console.print(f"[bold cyan]Saldo líquido:[/bold cyan] R$ {saldo_compartilhado:,.2f}")
+                self.console.print(f"[bold cyan]Valor dividido (50%):[/bold cyan] R$ {saldo_compartilhado/2:,.2f}")
                 self.console.print()
                 
                 # Tabela das transações
                 table = Table(show_header=True, header_style="bold magenta")
                 table.add_column("Data", style="cyan", width=12)
-                table.add_column("Descrição", style="white", width=30)
+                table.add_column("Descrição", style="white", width=25)
                 table.add_column("Valor", style="green", justify="right", width=12)
+                table.add_column("Tipo", style="yellow", justify="center", width=8)
                 table.add_column("Categoria", style="yellow", width=15)
                 table.add_column("Origem", style="blue", width=15)
                 
                 for transacao in transacoes:
-                    if transacao.tipo == TipoTransacao.DEBITO:  # Apenas gastos
-                        # Determinar origem
-                        origem = "N/A"
-                        if transacao.conta_id:
-                            conta = self.client.obter_conta(transacao.conta_id)
-                            origem = conta.nome if conta else "Conta"
-                        elif transacao.cartao_id:
-                            cartao = self.client.obter_cartao(transacao.cartao_id)
-                            origem = cartao.nome if cartao else "Cartão"
-                        
-                        valor_str = f"R$ {transacao.valor:,.2f}"
-                        if transacao.eh_parcelada:
-                            valor_str += f" ({len(transacao.parcelamento)}x)"
-                        
-                        table.add_row(
-                            transacao.data_transacao[:10],
-                            transacao.descricao,
-                            valor_str,
-                            transacao.categoria or "N/A",
-                            origem
-                        )
+                    # Mostrar todas as transações compartilhadas
+                    tipo_icon = "📤" if transacao.tipo == TipoTransacao.DEBITO else "📥"
+                    
+                    # Determinar origem
+                    origem = "N/A"
+                    if transacao.conta_id:
+                        conta = self.client.obter_conta(transacao.conta_id)
+                        origem = conta.nome if conta else "Conta"
+                    elif transacao.cartao_id:
+                        cartao = self.client.obter_cartao(transacao.cartao_id)
+                        origem = cartao.nome if cartao else "Cartão"
+                    
+                    valor_str = f"R$ {transacao.valor:,.2f}"
+                    if transacao.eh_parcelada:
+                        valor_str += f" ({len(transacao.parcelamento)}x)"
+                    
+                    table.add_row(
+                        transacao.data_transacao[:10],
+                        transacao.descricao,
+                        valor_str,
+                        tipo_icon,
+                        transacao.categoria or "N/A",
+                        origem
+                    )
                 
                 self.console.print(table)
                 
