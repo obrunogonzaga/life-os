@@ -674,47 +674,328 @@ class EncoraModule:
             console.print("[red]Entrada inválida![/red]")
             console.input("\nPressione Enter para continuar...")
     
+    def _calcular_horas_trabalhadas(self, registros: List[Dict]) -> Dict:
+        """Calcula horas trabalhadas baseado nos registros de ponto"""
+        if not registros:
+            return {
+                'entrada': None,
+                'saida': None,
+                'inicio_almoco': None,
+                'fim_almoco': None,
+                'horas_trabalhadas': 0,
+                'tempo_almoco': 0,
+                'status': 'sem_registros'
+            }
+        
+        # Organizar registros por tipo
+        entradas = [r for r in registros if r['tipo'] == 'entrada']
+        saidas = [r for r in registros if r['tipo'] == 'saida']
+        inicio_almocos = [r for r in registros if r['tipo'] == 'inicio_almoco']
+        fim_almocos = [r for r in registros if r['tipo'] == 'fim_almoco']
+        
+        result = {
+            'entrada': entradas[0]['horario'] if entradas else None,
+            'saida': saidas[-1]['horario'] if saidas else None,
+            'inicio_almoco': inicio_almocos[0]['horario'] if inicio_almocos else None,
+            'fim_almoco': fim_almocos[-1]['horario'] if fim_almocos else None,
+            'horas_trabalhadas': 0,
+            'tempo_almoco': 0,
+            'status': 'incompleto'
+        }
+        
+        # Calcular horas trabalhadas se tiver entrada e saída
+        if result['entrada'] and result['saida']:
+            try:
+                entrada_time = datetime.strptime(result['entrada'], "%H:%M")
+                saida_time = datetime.strptime(result['saida'], "%H:%M")
+                
+                # Lidar com saída no dia seguinte
+                if saida_time < entrada_time:
+                    saida_time += timedelta(days=1)
+                
+                total_tempo = saida_time - entrada_time
+                horas_totais = total_tempo.total_seconds() / 3600
+                
+                # Calcular tempo de almoço
+                tempo_almoco = 0
+                if result['inicio_almoco'] and result['fim_almoco']:
+                    inicio_almoco_time = datetime.strptime(result['inicio_almoco'], "%H:%M")
+                    fim_almoco_time = datetime.strptime(result['fim_almoco'], "%H:%M")
+                    
+                    if fim_almoco_time > inicio_almoco_time:
+                        almoco_delta = fim_almoco_time - inicio_almoco_time
+                        tempo_almoco = almoco_delta.total_seconds() / 3600
+                
+                result['tempo_almoco'] = tempo_almoco
+                result['horas_trabalhadas'] = max(0, horas_totais - tempo_almoco)
+                result['status'] = 'completo'
+                
+            except ValueError:
+                result['status'] = 'erro_calculo'
+        
+        return result
+    
     def _relatorio_semanal(self):
-        """Relatório semanal de ponto"""
+        """Relatório semanal de ponto com tabela detalhada"""
         console.clear()
         self._display_header()
         console.print(Panel("📊 RELATÓRIO SEMANAL", style="cyan"))
         
-        # Implementação básica - pode ser expandida
         hoje = datetime.now()
         inicio_semana = hoje - timedelta(days=hoje.weekday())
+        fim_semana = inicio_semana + timedelta(days=6)
         
-        registros_semana = []
+        config = self.get_configuracoes_ponto()
+        carga_horaria_diaria = config.get('carga_horaria_diaria', 8)
+        
+        console.print(f"\n[bold]Período: {inicio_semana.strftime('%d/%m/%Y')} a {fim_semana.strftime('%d/%m/%Y')}[/bold]")
+        
+        # Tabela detalhada
+        table = Table(title="Relatório Detalhado da Semana", box=box.ROUNDED)
+        table.add_column("Data", style="cyan", width=12)
+        table.add_column("Dia", style="white", width=10)
+        table.add_column("Entrada", style="green", width=8)
+        table.add_column("Saída", style="red", width=8)
+        table.add_column("Almoço", style="yellow", width=12)
+        table.add_column("Horas", style="magenta", width=8)
+        table.add_column("Saldo", style="white", width=8)
+        
+        total_horas_trabalhadas = 0
+        total_dias_trabalhados = 0
+        dias_semana = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB', 'DOM']
+        
         for i in range(7):
-            data = (inicio_semana + timedelta(days=i)).strftime("%Y-%m-%d")
-            registros_dia = self._get_registros_ponto_por_data(data)
-            if registros_dia:
-                registros_semana.extend(registros_dia)
+            data_atual = inicio_semana + timedelta(days=i)
+            data_str = data_atual.strftime("%Y-%m-%d")
+            data_formatada = data_atual.strftime("%d/%m")
+            dia_semana = dias_semana[i]
+            
+            registros_dia = self._get_registros_ponto_por_data(data_str)
+            calculo = self._calcular_horas_trabalhadas(registros_dia)
+            
+            # Formatação dos dados
+            entrada = calculo['entrada'] or '-'
+            saida = calculo['saida'] or '-'
+            
+            almoco = '-'
+            if calculo['inicio_almoco'] and calculo['fim_almoco']:
+                almoco = f"{calculo['inicio_almoco']}-{calculo['fim_almoco']}"
+            elif calculo['inicio_almoco']:
+                almoco = f"{calculo['inicio_almoco']}-?"
+            
+            horas_str = f"{calculo['horas_trabalhadas']:.1f}h" if calculo['horas_trabalhadas'] > 0 else '-'
+            
+            # Calcular saldo (horas extras ou faltantes)
+            saldo = 0
+            saldo_str = '-'
+            if calculo['horas_trabalhadas'] > 0:
+                saldo = calculo['horas_trabalhadas'] - carga_horaria_diaria
+                if saldo > 0:
+                    saldo_str = f"+{saldo:.1f}h"
+                elif saldo < 0:
+                    saldo_str = f"{saldo:.1f}h"
+                else:
+                    saldo_str = "0h"
+                
+                total_horas_trabalhadas += calculo['horas_trabalhadas']
+                total_dias_trabalhados += 1
+            
+            # Colorir linha baseado no status
+            if data_atual > hoje:
+                # Dia futuro
+                style = "dim"
+            elif calculo['status'] == 'sem_registros':
+                style = "red dim"
+            elif calculo['status'] == 'incompleto':
+                style = "yellow"
+            else:
+                style = "white"
+            
+            table.add_row(
+                data_formatada,
+                dia_semana,
+                entrada,
+                saida,
+                almoco,
+                horas_str,
+                saldo_str,
+                style=style
+            )
         
-        console.print(f"\n[bold]Registros da semana ({inicio_semana.strftime('%d/%m')} a {hoje.strftime('%d/%m')})[/bold]")
-        console.print(f"Total de registros: {len(registros_semana)}")
+        console.print(table)
+        
+        # Resumo da semana
+        horas_esperadas = total_dias_trabalhados * carga_horaria_diaria
+        saldo_total = total_horas_trabalhadas - horas_esperadas
+        
+        resumo_table = Table(title="Resumo da Semana", box=box.ROUNDED)
+        resumo_table.add_column("Métrica", style="cyan")
+        resumo_table.add_column("Valor", style="white")
+        
+        resumo_table.add_row("Dias trabalhados", str(total_dias_trabalhados))
+        resumo_table.add_row("Total de horas trabalhadas", f"{total_horas_trabalhadas:.1f}h")
+        resumo_table.add_row("Horas esperadas", f"{horas_esperadas:.1f}h")
+        
+        if saldo_total > 0:
+            resumo_table.add_row("Saldo", f"[green]+{saldo_total:.1f}h (extras)[/green]")
+        elif saldo_total < 0:
+            resumo_table.add_row("Saldo", f"[red]{saldo_total:.1f}h (faltantes)[/red]")
+        else:
+            resumo_table.add_row("Saldo", "0h (em dia)")
+        
+        console.print()
+        console.print(resumo_table)
         
         console.input("\nPressione Enter para continuar...")
     
     def _relatorio_mensal(self):
-        """Relatório mensal de ponto"""
+        """Relatório mensal de ponto com tabela detalhada"""
         console.clear()
         self._display_header()
         console.print(Panel("📈 RELATÓRIO MENSAL", style="cyan"))
         
-        # Implementação básica - pode ser expandida
         hoje = datetime.now()
         primeiro_dia_mes = hoje.replace(day=1)
         
-        registros_mes = []
-        todos_registros = self._get_todos_registros_ponto()
-        for registro in todos_registros:
-            data_registro = datetime.strptime(registro["data"], "%Y-%m-%d")
-            if data_registro >= primeiro_dia_mes and data_registro <= hoje:
-                registros_mes.append(registro)
+        # Calcular último dia do mês
+        if hoje.month == 12:
+            ultimo_dia_mes = hoje.replace(year=hoje.year + 1, month=1, day=1) - timedelta(days=1)
+        else:
+            ultimo_dia_mes = hoje.replace(month=hoje.month + 1, day=1) - timedelta(days=1)
         
-        console.print(f"\n[bold]Registros do mês ({primeiro_dia_mes.strftime('%m/%Y')})[/bold]")
-        console.print(f"Total de registros: {len(registros_mes)}")
+        config = self.get_configuracoes_ponto()
+        carga_horaria_diaria = config.get('carga_horaria_diaria', 8)
+        
+        console.print(f"\n[bold]Período: {primeiro_dia_mes.strftime('%d/%m/%Y')} a {hoje.strftime('%d/%m/%Y')}[/bold]")
+        
+        # Tabela detalhada
+        table = Table(title=f"Relatório Detalhado - {primeiro_dia_mes.strftime('%B/%Y')}", box=box.ROUNDED)
+        table.add_column("Data", style="cyan", width=12)
+        table.add_column("Dia", style="white", width=10)
+        table.add_column("Entrada", style="green", width=8)
+        table.add_column("Saída", style="red", width=8)
+        table.add_column("Almoço", style="yellow", width=12)
+        table.add_column("Horas", style="magenta", width=8)
+        table.add_column("Saldo", style="white", width=8)
+        
+        total_horas_trabalhadas = 0
+        total_dias_trabalhados = 0
+        total_dias_uteis = 0
+        
+        dias_semana = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB', 'DOM']
+        
+        # Iterar por todos os dias do mês até hoje
+        data_atual = primeiro_dia_mes
+        while data_atual <= hoje:
+            data_str = data_atual.strftime("%Y-%m-%d")
+            data_formatada = data_atual.strftime("%d/%m")
+            dia_semana = dias_semana[data_atual.weekday()]
+            
+            # Considerar apenas dias úteis (segunda a sexta) para cálculo de dias úteis
+            if data_atual.weekday() < 5:  # 0-4 = segunda a sexta
+                total_dias_uteis += 1
+            
+            registros_dia = self._get_registros_ponto_por_data(data_str)
+            calculo = self._calcular_horas_trabalhadas(registros_dia)
+            
+            # Formatação dos dados
+            entrada = calculo['entrada'] or '-'
+            saida = calculo['saida'] or '-'
+            
+            almoco = '-'
+            if calculo['inicio_almoco'] and calculo['fim_almoco']:
+                almoco = f"{calculo['inicio_almoco']}-{calculo['fim_almoco']}"
+            elif calculo['inicio_almoco']:
+                almoco = f"{calculo['inicio_almoco']}-?"
+            
+            horas_str = f"{calculo['horas_trabalhadas']:.1f}h" if calculo['horas_trabalhadas'] > 0 else '-'
+            
+            # Calcular saldo (horas extras ou faltantes)
+            saldo = 0
+            saldo_str = '-'
+            if calculo['horas_trabalhadas'] > 0:
+                saldo = calculo['horas_trabalhadas'] - carga_horaria_diaria
+                if saldo > 0:
+                    saldo_str = f"+{saldo:.1f}h"
+                elif saldo < 0:
+                    saldo_str = f"{saldo:.1f}h"
+                else:
+                    saldo_str = "0h"
+                
+                total_horas_trabalhadas += calculo['horas_trabalhadas']
+                total_dias_trabalhados += 1
+            
+            # Colorir linha baseado no dia da semana e status
+            if data_atual.weekday() >= 5:  # Fim de semana
+                style = "dim blue"
+            elif calculo['status'] == 'sem_registros':
+                style = "red dim"
+            elif calculo['status'] == 'incompleto':
+                style = "yellow"
+            else:
+                style = "white"
+            
+            table.add_row(
+                data_formatada,
+                dia_semana,
+                entrada,
+                saida,
+                almoco,
+                horas_str,
+                saldo_str,
+                style=style
+            )
+            
+            data_atual += timedelta(days=1)
+        
+        console.print(table)
+        
+        # Resumo do mês
+        horas_esperadas_total = total_dias_uteis * carga_horaria_diaria
+        saldo_total = total_horas_trabalhadas - (total_dias_trabalhados * carga_horaria_diaria)
+        
+        resumo_table = Table(title="Resumo do Mês", box=box.ROUNDED)
+        resumo_table.add_column("Métrica", style="cyan")
+        resumo_table.add_column("Valor", style="white")
+        
+        resumo_table.add_row("Dias úteis no período", str(total_dias_uteis))
+        resumo_table.add_row("Dias trabalhados", str(total_dias_trabalhados))
+        resumo_table.add_row("Total de horas trabalhadas", f"{total_horas_trabalhadas:.1f}h")
+        resumo_table.add_row("Horas esperadas (dias trabalhados)", f"{total_dias_trabalhados * carga_horaria_diaria:.1f}h")
+        resumo_table.add_row("Horas esperadas (dias úteis)", f"{horas_esperadas_total:.1f}h")
+        
+        if saldo_total > 0:
+            resumo_table.add_row("Saldo (baseado em dias trabalhados)", f"[green]+{saldo_total:.1f}h (extras)[/green]")
+        elif saldo_total < 0:
+            resumo_table.add_row("Saldo (baseado em dias trabalhados)", f"[red]{saldo_total:.1f}h (faltantes)[/red]")
+        else:
+            resumo_table.add_row("Saldo (baseado em dias trabalhados)", "0h (em dia)")
+        
+        # Saldo considerando todos os dias úteis
+        saldo_total_uteis = total_horas_trabalhadas - horas_esperadas_total
+        if saldo_total_uteis > 0:
+            resumo_table.add_row("Saldo (baseado em dias úteis)", f"[green]+{saldo_total_uteis:.1f}h (extras)[/green]")
+        elif saldo_total_uteis < 0:
+            resumo_table.add_row("Saldo (baseado em dias úteis)", f"[red]{saldo_total_uteis:.1f}h (faltantes)[/red]")
+        else:
+            resumo_table.add_row("Saldo (baseado em dias úteis)", "0h (em dia)")
+        
+        console.print()
+        console.print(resumo_table)
+        
+        # Estatísticas adicionais
+        if total_dias_trabalhados > 0:
+            media_horas_dia = total_horas_trabalhadas / total_dias_trabalhados
+            
+            stats_table = Table(title="Estatísticas Adicionais", box=box.ROUNDED)
+            stats_table.add_column("Métrica", style="cyan")
+            stats_table.add_column("Valor", style="white")
+            
+            stats_table.add_row("Média de horas por dia trabalhado", f"{media_horas_dia:.1f}h")
+            stats_table.add_row("Percentual de frequência", f"{(total_dias_trabalhados / total_dias_uteis * 100):.1f}%")
+            
+            console.print()
+            console.print(stats_table)
         
         console.input("\nPressione Enter para continuar...")
     
