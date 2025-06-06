@@ -275,9 +275,11 @@ class EncoraModule:
             table.add_row("3", "🍽️ Início do Almoço")
             table.add_row("4", "🍽️ Fim do Almoço")
             table.add_row("5", "📋 Ver Registros de Hoje")
-            table.add_row("6", "📊 Relatório Semanal")
-            table.add_row("7", "📈 Relatório Mensal")
-            table.add_row("8", "⚙️ Configurações")
+            table.add_row("6", "✏️ Editar Registro")
+            table.add_row("7", "🗑️ Remover Registro")
+            table.add_row("8", "📊 Relatório Semanal")
+            table.add_row("9", "📈 Relatório Mensal")
+            table.add_row("10", "⚙️ Configurações")
             table.add_row("0", "🔙 Voltar")
             
             console.print(table)
@@ -296,10 +298,14 @@ class EncoraModule:
             elif choice == "5":
                 self._ver_registros_hoje()
             elif choice == "6":
-                self._relatorio_semanal()
+                self._editar_registro_ponto()
             elif choice == "7":
-                self._relatorio_mensal()
+                self._remover_registro_ponto()
             elif choice == "8":
+                self._relatorio_semanal()
+            elif choice == "9":
+                self._relatorio_mensal()
+            elif choice == "10":
                 self._configuracoes_ponto()
             elif choice == "0":
                 break
@@ -333,7 +339,7 @@ class EncoraModule:
         console.print(f"\n[green]✅ {tipos_nomes[tipo]} registrada às {horario}[/green]")
         console.input("\nPressione Enter para continuar...")
     
-    def _ver_registros_hoje(self):
+    def _ver_registros_hoje(self, show_ids=False):
         """Exibe registros do dia atual"""
         console.clear()
         self._display_header()
@@ -344,9 +350,11 @@ class EncoraModule:
         if not registros_hoje:
             console.print("[yellow]Nenhum registro encontrado para hoje.[/yellow]")
             console.input("\nPressione Enter para continuar...")
-            return
+            return registros_hoje
         
         table = Table(title=f"Registros de {datetime.now().strftime('%d/%m/%Y')}", box=box.ROUNDED)
+        if show_ids:
+            table.add_column("ID", style="dim", width=5)
         table.add_column("Horário", style="cyan")
         table.add_column("Tipo", style="white")
         
@@ -357,14 +365,314 @@ class EncoraModule:
             "fim_almoco": "🍽️ Fim Almoço"
         }
         
-        for registro in registros_hoje:
+        for i, registro in enumerate(registros_hoje, 1):
+            if show_ids:
+                table.add_row(
+                    str(i),
+                    registro["horario"],
+                    tipos_nomes.get(registro["tipo"], registro["tipo"])
+                )
+            else:
+                table.add_row(
+                    registro["horario"],
+                    tipos_nomes.get(registro["tipo"], registro["tipo"])
+                )
+        
+        console.print(table)
+        if not show_ids:
+            console.input("\nPressione Enter para continuar...")
+        
+        return registros_hoje
+    
+    def _editar_registro_ponto(self):
+        """Editar registro de ponto"""
+        console.clear()
+        self._display_header()
+        console.print(Panel("✏️ EDITAR REGISTRO DE PONTO", style="cyan"))
+        
+        # Perguntar se quer editar registros de hoje ou escolher data
+        console.print("\n[bold]Escolha uma opção:[/bold]")
+        console.print("1. Editar registros de hoje")
+        console.print("2. Editar registros de outra data")
+        
+        escolha = Prompt.ask("Opção", default="1")
+        
+        if escolha == "1":
+            data_escolhida = datetime.now().strftime("%Y-%m-%d")
+        elif escolha == "2":
+            # Permitir escolher data dentro do mês atual
+            mes_atual = datetime.now().strftime("%m/%Y")
+            data_str = Prompt.ask(f"Digite a data (DD/MM/YYYY) - Mês atual: {mes_atual}")
+            try:
+                data_obj = datetime.strptime(data_str, "%d/%m/%Y")
+                # Verificar se está no mês atual
+                if data_obj.month != datetime.now().month or data_obj.year != datetime.now().year:
+                    console.print("[yellow]⚠️ Só é permitido editar registros do mês atual![/yellow]")
+                    console.input("\nPressione Enter para continuar...")
+                    return
+                data_escolhida = data_obj.strftime("%Y-%m-%d")
+            except ValueError:
+                console.print("[red]Data inválida![/red]")
+                console.input("\nPressione Enter para continuar...")
+                return
+        else:
+            return
+        
+        # Buscar registros da data escolhida
+        registros = self._get_registros_ponto_por_data(data_escolhida)
+        
+        if not registros:
+            console.print(f"\n[yellow]Nenhum registro encontrado para {datetime.strptime(data_escolhida, '%Y-%m-%d').strftime('%d/%m/%Y')}.[/yellow]")
+            console.input("\nPressione Enter para continuar...")
+            return
+        
+        # Exibir registros com IDs
+        console.clear()
+        self._display_header()
+        
+        table = Table(title=f"Registros de {datetime.strptime(data_escolhida, '%Y-%m-%d').strftime('%d/%m/%Y')}", box=box.ROUNDED)
+        table.add_column("ID", style="dim", width=5)
+        table.add_column("Horário", style="cyan")
+        table.add_column("Tipo", style="white")
+        
+        tipos_nomes = {
+            "entrada": "🕐 Entrada",
+            "saida": "🕕 Saída",
+            "inicio_almoco": "🍽️ Início Almoço",
+            "fim_almoco": "🍽️ Fim Almoço"
+        }
+        
+        for i, registro in enumerate(registros, 1):
             table.add_row(
+                str(i),
                 registro["horario"],
                 tipos_nomes.get(registro["tipo"], registro["tipo"])
             )
         
         console.print(table)
-        console.input("\nPressione Enter para continuar...")
+        
+        console.print()
+        id_registro = Prompt.ask("Número do registro para editar (0 para cancelar)")
+        
+        if id_registro == "0":
+            return
+        
+        try:
+            idx = int(id_registro) - 1
+            if idx < 0 or idx >= len(registros):
+                console.print("[red]Número de registro inválido![/red]")
+                console.input("\nPressione Enter para continuar...")
+                return
+            
+            registro = registros[idx]
+            
+            console.print(f"\n[bold]Editando registro:[/bold]")
+            console.print(f"Horário atual: {registro['horario']}")
+            console.print(f"Tipo atual: {registro['tipo']}")
+            
+            # Editar horário
+            novo_horario = Prompt.ask("Novo horário (HH:MM)", default=registro['horario'])
+            
+            # Validar formato do horário
+            try:
+                datetime.strptime(novo_horario, "%H:%M")
+            except ValueError:
+                console.print("[red]Formato de horário inválido! Use HH:MM[/red]")
+                console.input("\nPressione Enter para continuar...")
+                return
+            
+            # Editar tipo
+            tipos_validos = ["entrada", "saida", "inicio_almoco", "fim_almoco"]
+            console.print("\nTipos válidos: entrada, saida, inicio_almoco, fim_almoco")
+            novo_tipo = Prompt.ask("Novo tipo", default=registro['tipo'])
+            
+            if novo_tipo not in tipos_validos:
+                console.print("[red]Tipo inválido![/red]")
+                console.input("\nPressione Enter para continuar...")
+                return
+            
+            # Confirmar edição
+            if Confirm.ask("Confirma a edição do registro?"):
+                # Atualizar registro
+                if self.db_manager.is_connected():
+                    collection = self.db_manager.get_collection(self.collections['ponto_registros'])
+                    # Encontrar e atualizar o registro específico
+                    collection.update_one(
+                        {
+                            "data": registro["data"],
+                            "horario": registro["horario"],
+                            "tipo": registro["tipo"]
+                        },
+                        {
+                            "$set": {
+                                "horario": novo_horario,
+                                "tipo": novo_tipo,
+                                "timestamp": datetime.strptime(f"{registro['data']} {novo_horario}", "%Y-%m-%d %H:%M").isoformat(),
+                                "updated_at": datetime.now()
+                            }
+                        }
+                    )
+                    console.print(f"\n[green]✅ Registro atualizado com sucesso![/green]")
+                else:
+                    # Atualizar no fallback JSON
+                    try:
+                        with open(self.fallback_file, 'r', encoding='utf-8') as f:
+                            data_json = json.load(f)
+                        
+                        registros = data_json.get("ponto", {}).get("registros", [])
+                        for r in registros:
+                            if (r.get("data") == registro["data"] and 
+                                r.get("horario") == registro["horario"] and 
+                                r.get("tipo") == registro["tipo"]):
+                                r["horario"] = novo_horario
+                                r["tipo"] = novo_tipo
+                                r["timestamp"] = datetime.strptime(f"{registro['data']} {novo_horario}", "%Y-%m-%d %H:%M").isoformat()
+                                r["updated_at"] = datetime.now().isoformat()
+                                break
+                        
+                        with open(self.fallback_file, 'w', encoding='utf-8') as f:
+                            json.dump(data_json, f, indent=2, ensure_ascii=False)
+                        
+                        console.print(f"\n[green]✅ Registro atualizado com sucesso![/green]")
+                    except Exception as e:
+                        console.print(f"[red]Erro ao atualizar registro: {e}[/red]")
+                
+                console.input("\nPressione Enter para continuar...")
+        
+        except ValueError:
+            console.print("[red]Entrada inválida![/red]")
+            console.input("\nPressione Enter para continuar...")
+    
+    def _remover_registro_ponto(self):
+        """Remover registro de ponto"""
+        console.clear()
+        self._display_header()
+        console.print(Panel("🗑️ REMOVER REGISTRO DE PONTO", style="red"))
+        
+        # Perguntar se quer remover registros de hoje ou escolher data
+        console.print("\n[bold]Escolha uma opção:[/bold]")
+        console.print("1. Remover registros de hoje")
+        console.print("2. Remover registros de outra data")
+        
+        escolha = Prompt.ask("Opção", default="1")
+        
+        if escolha == "1":
+            data_escolhida = datetime.now().strftime("%Y-%m-%d")
+        elif escolha == "2":
+            # Permitir escolher data dentro do mês atual
+            mes_atual = datetime.now().strftime("%m/%Y")
+            data_str = Prompt.ask(f"Digite a data (DD/MM/YYYY) - Mês atual: {mes_atual}")
+            try:
+                data_obj = datetime.strptime(data_str, "%d/%m/%Y")
+                # Verificar se está no mês atual
+                if data_obj.month != datetime.now().month or data_obj.year != datetime.now().year:
+                    console.print("[yellow]⚠️ Só é permitido remover registros do mês atual![/yellow]")
+                    console.input("\nPressione Enter para continuar...")
+                    return
+                data_escolhida = data_obj.strftime("%Y-%m-%d")
+            except ValueError:
+                console.print("[red]Data inválida![/red]")
+                console.input("\nPressione Enter para continuar...")
+                return
+        else:
+            return
+        
+        # Buscar registros da data escolhida
+        registros = self._get_registros_ponto_por_data(data_escolhida)
+        
+        if not registros:
+            console.print(f"\n[yellow]Nenhum registro encontrado para {datetime.strptime(data_escolhida, '%Y-%m-%d').strftime('%d/%m/%Y')}.[/yellow]")
+            console.input("\nPressione Enter para continuar...")
+            return
+        
+        # Exibir registros com IDs
+        console.clear()
+        self._display_header()
+        
+        table = Table(title=f"Registros de {datetime.strptime(data_escolhida, '%Y-%m-%d').strftime('%d/%m/%Y')}", box=box.ROUNDED)
+        table.add_column("ID", style="dim", width=5)
+        table.add_column("Horário", style="cyan")
+        table.add_column("Tipo", style="white")
+        
+        tipos_nomes = {
+            "entrada": "🕐 Entrada",
+            "saida": "🕕 Saída",
+            "inicio_almoco": "🍽️ Início Almoço",
+            "fim_almoco": "🍽️ Fim Almoço"
+        }
+        
+        for i, registro in enumerate(registros, 1):
+            table.add_row(
+                str(i),
+                registro["horario"],
+                tipos_nomes.get(registro["tipo"], registro["tipo"])
+            )
+        
+        console.print(table)
+        
+        console.print()
+        id_registro = Prompt.ask("Número do registro para remover (0 para cancelar)")
+        
+        if id_registro == "0":
+            return
+        
+        try:
+            idx = int(id_registro) - 1
+            if idx < 0 or idx >= len(registros):
+                console.print("[red]Número de registro inválido![/red]")
+                console.input("\nPressione Enter para continuar...")
+                return
+            
+            registro = registros[idx]
+            
+            console.print(f"\n[bold]Removendo registro:[/bold]")
+            console.print(f"Horário: {registro['horario']}")
+            console.print(f"Tipo: {registro['tipo']}")
+            
+            # Confirmar remoção
+            if Confirm.ask("[bold red]Tem certeza que deseja remover este registro?[/bold red]"):
+                # Remover registro
+                if self.db_manager.is_connected():
+                    collection = self.db_manager.get_collection(self.collections['ponto_registros'])
+                    # Remover o registro específico
+                    result = collection.delete_one({
+                        "data": registro["data"],
+                        "horario": registro["horario"],
+                        "tipo": registro["tipo"]
+                    })
+                    
+                    if result.deleted_count > 0:
+                        console.print(f"\n[green]✅ Registro removido com sucesso![/green]")
+                    else:
+                        console.print(f"\n[red]Erro ao remover registro.[/red]")
+                else:
+                    # Remover do fallback JSON
+                    try:
+                        with open(self.fallback_file, 'r', encoding='utf-8') as f:
+                            data_json = json.load(f)
+                        
+                        registros = data_json.get("ponto", {}).get("registros", [])
+                        registros_filtrados = [
+                            r for r in registros
+                            if not (r.get("data") == registro["data"] and 
+                                   r.get("horario") == registro["horario"] and 
+                                   r.get("tipo") == registro["tipo"])
+                        ]
+                        
+                        data_json["ponto"]["registros"] = registros_filtrados
+                        
+                        with open(self.fallback_file, 'w', encoding='utf-8') as f:
+                            json.dump(data_json, f, indent=2, ensure_ascii=False)
+                        
+                        console.print(f"\n[green]✅ Registro removido com sucesso![/green]")
+                    except Exception as e:
+                        console.print(f"[red]Erro ao remover registro: {e}[/red]")
+                
+                console.input("\nPressione Enter para continuar...")
+        
+        except ValueError:
+            console.print("[red]Entrada inválida![/red]")
+            console.input("\nPressione Enter para continuar...")
     
     def _relatorio_semanal(self):
         """Relatório semanal de ponto"""
