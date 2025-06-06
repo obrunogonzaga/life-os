@@ -1,7 +1,9 @@
 import json
 import uuid
+import csv
+import re
 from datetime import datetime, timedelta
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Tuple
 from pathlib import Path
 from calendar import monthrange
 
@@ -484,3 +486,256 @@ class FinanceClient:
         except Exception as e:
             print(f"Erro ao gerar resumo financeiro: {e}")
             return ResumoFinanceiro(0, 0, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 0, 0)
+
+    # Métodos de importação de arquivos
+    def detectar_formato_csv(self, arquivo_path: str) -> Optional[str]:
+        """
+        Detecta o formato do arquivo CSV (Bradesco, Itaú, BTG)
+        
+        Args:
+            arquivo_path: Caminho para o arquivo CSV
+            
+        Returns:
+            String indicando o banco ou None se não reconhecido
+        """
+        try:
+            with open(arquivo_path, 'r', encoding='utf-8', errors='ignore') as file:
+                content = file.read()
+                
+                # Verificar formato Bradesco
+                if "Data;Histórico;Valor(US$);Valor(R$);" in content or "Data;Hist�rico;Valor(US$);Valor(R$);" in content:
+                    return "bradesco"
+                
+                # Verificar formato Itaú (exemplo)
+                if "data,descricao,valor" in content.lower():
+                    return "itau"
+                
+                # Verificar formato BTG (exemplo)
+                if "date,description,amount" in content.lower():
+                    return "btg"
+                
+                return None
+                
+        except Exception as e:
+            print(f"Erro ao detectar formato do arquivo: {e}")
+            return None
+
+    def processar_csv_bradesco(self, arquivo_path: str, cartao_id: str) -> Tuple[List[Dict], int, int]:
+        """
+        Processa arquivo CSV do Bradesco e retorna transações processadas
+        
+        Args:
+            arquivo_path: Caminho para o arquivo CSV
+            cartao_id: ID do cartão associado
+            
+        Returns:
+            Tupla com (transações_processadas, total_linhas, transações_importadas)
+        """
+        try:
+            transacoes_processadas = []
+            total_linhas = 0
+            transacoes_importadas = 0
+            
+            # Obter informações do cartão
+            cartao = self.obter_cartao(cartao_id)
+            if not cartao:
+                raise Exception("Cartão não encontrado")
+            
+            with open(arquivo_path, 'r', encoding='utf-8', errors='ignore') as file:
+                linhas = file.readlines()
+            
+            # Encontrar a linha do cabeçalho
+            linha_inicio = -1
+            for i, linha in enumerate(linhas):
+                if "Data;Histórico;Valor(US$);Valor(R$);" in linha or "Data;Hist�rico;Valor(US$);Valor(R$);" in linha:
+                    linha_inicio = i
+                    break
+            
+            if linha_inicio == -1:
+                raise Exception("Formato do arquivo Bradesco não reconhecido")
+            
+            # Processar transações
+            for i in range(linha_inicio + 1, len(linhas)):
+                linha = linhas[i].strip()
+                
+                # Parar se encontrar linha vazia ou fim das transações
+                if not linha or linha.count(';') < 3:
+                    break
+                
+                total_linhas += 1
+                
+                # Parse da linha CSV
+                partes = linha.split(';')
+                if len(partes) >= 4:
+                    try:
+                        data_str = partes[0].strip()
+                        descricao = partes[1].strip()
+                        valor_usd_str = partes[2].strip()
+                        valor_brl_str = partes[3].strip()
+                        
+                        # Converter data (formato DD/MM/YYYY)
+                        if '/' in data_str:
+                            dia, mes, ano = data_str.split('/')
+                            data_transacao = f"{ano}-{mes.zfill(2)}-{dia.zfill(2)}"
+                        else:
+                            continue  # Pular se não conseguir converter data
+                        
+                        # Converter valor (formato brasileiro: 1.234,56)
+                        valor_limpo = valor_brl_str.replace('.', '').replace(',', '.').replace('R$', '').strip()
+                        
+                        # Remover caracteres não numéricos exceto ponto e hífen
+                        valor_limpo = re.sub(r'[^0-9.,\-]', '', valor_limpo)
+                        valor_limpo = valor_limpo.replace(',', '.')
+                        
+                        if valor_limpo:
+                            valor = abs(float(valor_limpo))  # Usar valor absoluto
+                            
+                            # Determinar tipo (assumir que valores são débitos por padrão em cartão)
+                            tipo = TipoTransacao.DEBITO
+                            
+                            # Verificar se a transação já existe neste mês
+                            data_dt = datetime.strptime(data_transacao, "%Y-%m-%d")
+                            transacoes_mes = self.obter_transacoes_mes(data_dt.year, data_dt.month)
+                            
+                            # Verificar duplicatas por data, valor e cartão
+                            ja_existe = False
+                            for t in transacoes_mes:
+                                if (t.cartao_id == cartao_id and 
+                                    t.data_transacao[:10] == data_transacao and 
+                                    abs(t.valor - valor) < 0.01):  # Tolerância de 1 centavo
+                                    ja_existe = True
+                                    break
+                            
+                            if not ja_existe:
+                                transacao_data = {
+                                    'data_transacao': data_transacao,
+                                    'descricao': descricao,
+                                    'valor': valor,
+                                    'tipo': tipo,
+                                    'cartao_id': cartao_id,
+                                    'compartilhado_com_alzi': cartao.compartilhado_com_alzi,
+                                    'categoria': 'Importado - Bradesco',
+                                    'observacoes': f'Importado de CSV - Valor USD: {valor_usd_str}'
+                                }
+                                transacoes_processadas.append(transacao_data)
+                        
+                    except (ValueError, IndexError) as e:
+                        print(f"Erro ao processar linha {i+1}: {linha} - {e}")
+                        continue
+            
+            return transacoes_processadas, total_linhas, len(transacoes_processadas)
+            
+        except Exception as e:
+            print(f"Erro ao processar CSV do Bradesco: {e}")
+            return [], 0, 0
+
+    def importar_transacoes_csv(self, arquivo_path: str, cartao_id: str) -> Dict[str, Any]:
+        """
+        Importa transações de um arquivo CSV
+        
+        Args:
+            arquivo_path: Caminho para o arquivo CSV
+            cartao_id: ID do cartão associado
+            
+        Returns:
+            Dicionário com resultado da importação
+        """
+        try:
+            # Detectar formato do arquivo
+            formato = self.detectar_formato_csv(arquivo_path)
+            
+            if formato != "bradesco":
+                return {
+                    'sucesso': False,
+                    'erro': f'Formato não suportado: {formato}. Apenas Bradesco suportado no momento.',
+                    'transacoes_importadas': 0,
+                    'total_linhas': 0
+                }
+            
+            # Processar arquivo Bradesco
+            transacoes_data, total_linhas, transacoes_encontradas = self.processar_csv_bradesco(arquivo_path, cartao_id)
+            
+            # Importar transações para o banco
+            transacoes_importadas = 0
+            erros = []
+            
+            for transacao_data in transacoes_data:
+                try:
+                    nova_transacao = self.criar_transacao(
+                        descricao=transacao_data['descricao'],
+                        valor=transacao_data['valor'],
+                        tipo=transacao_data['tipo'],
+                        data_transacao=transacao_data['data_transacao'],
+                        categoria=transacao_data['categoria'],
+                        cartao_id=transacao_data['cartao_id'],
+                        observacoes=transacao_data['observacoes'],
+                        compartilhado_com_alzi=transacao_data['compartilhado_com_alzi']
+                    )
+                    
+                    if nova_transacao:
+                        transacoes_importadas += 1
+                    else:
+                        erros.append(f"Falha ao criar transação: {transacao_data['descricao']}")
+                        
+                except Exception as e:
+                    erros.append(f"Erro ao importar transação {transacao_data['descricao']}: {e}")
+            
+            # Gerar CSV limpo para download
+            csv_limpo_path = self._gerar_csv_limpo(transacoes_data, arquivo_path)
+            
+            return {
+                'sucesso': True,
+                'formato_detectado': formato,
+                'total_linhas': total_linhas,
+                'transacoes_encontradas': transacoes_encontradas,
+                'transacoes_importadas': transacoes_importadas,
+                'erros': erros,
+                'csv_limpo_path': csv_limpo_path
+            }
+            
+        except Exception as e:
+            return {
+                'sucesso': False,
+                'erro': str(e),
+                'transacoes_importadas': 0,
+                'total_linhas': 0
+            }
+
+    def _gerar_csv_limpo(self, transacoes_data: List[Dict], arquivo_original: str) -> str:
+        """
+        Gera um arquivo CSV limpo com as transações processadas
+        
+        Args:
+            transacoes_data: Lista de transações processadas
+            arquivo_original: Caminho do arquivo original
+            
+        Returns:
+            Caminho do arquivo CSV limpo gerado
+        """
+        try:
+            # Criar nome do arquivo limpo
+            arquivo_path = Path(arquivo_original)
+            csv_limpo_path = arquivo_path.parent / f"{arquivo_path.stem}_limpo.csv"
+            
+            # Gerar CSV limpo
+            with open(csv_limpo_path, 'w', newline='', encoding='utf-8') as csvfile:
+                fieldnames = ['Data', 'Descrição', 'Valor', 'Tipo', 'Categoria', 'Compartilhado_Alzi', 'Observações']
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames, delimiter=';')
+                
+                writer.writeheader()
+                for transacao in transacoes_data:
+                    writer.writerow({
+                        'Data': transacao['data_transacao'],
+                        'Descrição': transacao['descricao'],
+                        'Valor': f"R$ {transacao['valor']:.2f}",
+                        'Tipo': transacao['tipo'].value if hasattr(transacao['tipo'], 'value') else transacao['tipo'],
+                        'Categoria': transacao['categoria'],
+                        'Compartilhado_Alzi': 'Sim' if transacao['compartilhado_com_alzi'] else 'Não',
+                        'Observações': transacao['observacoes']
+                    })
+            
+            return str(csv_limpo_path)
+            
+        except Exception as e:
+            print(f"Erro ao gerar CSV limpo: {e}")
+            return ""
