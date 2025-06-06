@@ -191,8 +191,43 @@ class TodoistLabel:
 - **Modular Design**: Easy addition of new scrapers and modules
 - **Docker Integration**: Zero-config setup with automated database
 - **Environment Management**: Flexible configuration via .env files
-- **API Integration**: RESTful clients for external services (Todoist)
+- **API Integration**: RESTful clients for external services (Todoist REST v2 + Sync v9)
 - **Rich Terminal UI**: Advanced terminal interfaces with formatting and interactivity
+
+## 🔀 Git Workflow - REGRAS IMPORTANTES
+
+⚠️ **REGRA CRÍTICA**: NUNCA fazer push direto na branch main!
+
+### Workflow Obrigatório para Mudanças
+
+#### 1. Sempre criar uma nova branch para mudanças
+```bash
+# Criar nova branch antes de qualquer alteração
+git checkout -b feature/nome-da-feature
+# ou
+git checkout -b fix/nome-do-bug
+```
+
+#### 2. Fazer commit na branch
+```bash
+git add .
+git commit -m "sua mensagem de commit"
+```
+
+#### 3. Fazer push da branch (não da main)
+```bash
+git push origin nome-da-branch
+```
+
+#### 4. Criar Pull Request
+- Usar GitHub interface ou `gh pr create`
+- Fazer merge via Pull Request, não push direto
+
+### Exemplos de Nomes de Branch
+- `feature/todoist-api-fix` - Para novas funcionalidades
+- `fix/completed-tasks-endpoint` - Para correções de bugs
+- `docs/update-readme` - Para atualizações de documentação
+- `refactor/database-client` - Para refatorações
 
 ## Comandos para Execução
 
@@ -270,6 +305,17 @@ if task:
     print(f'Tarefa criada: {task.content} (ID: {task.id})')
     client.complete_task(task.id)
     print('Tarefa marcada como concluída')
+"
+
+# Testar tarefas concluídas (corrigido - usa Sync API v9)
+python -c "
+from utils.todoist_client import TodoistClient
+from utils.config import Config
+client = TodoistClient(Config.TODOIST_API_TOKEN)
+completed = client.get_completed_tasks(limit=5)
+print(f'Tarefas concluídas: {len(completed)}')
+for task in completed[:3]:
+    print(f'  ✓ {task.get(\"content\", task.get(\"item\", {}).get(\"content\", \"Sem título\"))}')
 "
 
 # Testar funcionalidades do módulo de tarefas
