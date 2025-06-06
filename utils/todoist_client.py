@@ -1,7 +1,7 @@
 import requests
 from typing import List, Dict, Optional, Any
 from dataclasses import dataclass, asdict, field
-from datetime import datetime
+from datetime import datetime, date, timedelta
 import json
 
 
@@ -387,3 +387,47 @@ class TodoistClient:
         except requests.exceptions.RequestException as e:
             print(f"❌ Erro ao buscar tarefas concluídas: {e}")
             return []
+    
+    # Date filtering methods
+    def get_tasks_today(self) -> List[TodoistTask]:
+        """Get tasks due today"""
+        return self.get_tasks(filter="today")
+    
+    def get_tasks_next_7_days(self) -> List[TodoistTask]:
+        """Get tasks due in the next 7 days"""
+        today = date.today()
+        next_week = today + timedelta(days=7)
+        
+        # Get all tasks and filter by due date
+        all_tasks = self.get_tasks()
+        filtered_tasks = []
+        
+        for task in all_tasks:
+            if task.due and 'date' in task.due:
+                try:
+                    task_due_date = datetime.fromisoformat(task.due['date'].replace('Z', '')).date()
+                    if today <= task_due_date <= next_week:
+                        filtered_tasks.append(task)
+                except (ValueError, KeyError):
+                    continue
+        
+        return filtered_tasks
+    
+    def get_overdue_tasks(self) -> List[TodoistTask]:
+        """Get overdue tasks"""
+        return self.get_tasks(filter="overdue")
+    
+    def filter_tasks_by_date_range(self, tasks: List[TodoistTask], start_date: date, end_date: date) -> List[TodoistTask]:
+        """Filter tasks by date range"""
+        filtered_tasks = []
+        
+        for task in tasks:
+            if task.due and 'date' in task.due:
+                try:
+                    task_due_date = datetime.fromisoformat(task.due['date'].replace('Z', '')).date()
+                    if start_date <= task_due_date <= end_date:
+                        filtered_tasks.append(task)
+                except (ValueError, KeyError):
+                    continue
+        
+        return filtered_tasks
