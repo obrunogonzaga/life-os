@@ -502,9 +502,19 @@ class FinanceClient:
             with open(arquivo_path, 'r', encoding='utf-8', errors='ignore') as file:
                 content = file.read()
                 
-                # Verificar formato Bradesco
-                if "Data;Histórico;Valor(US$);Valor(R$);" in content or "Data;Hist�rico;Valor(US$);Valor(R$);" in content:
-                    return "bradesco"
+                # Verificar formato Bradesco (várias variações possíveis)
+                bradesco_patterns = [
+                    "Data;Histórico;Valor(US$);Valor(R$);",
+                    "Data;Hist�rico;Valor(US$);Valor(R$);",
+                    "Data;Histrico;Valor(US$);Valor(R$);",  # Encoding issues
+                    "Data;Histórico;Valor(US$);Valor(R$)",   # Sem ponto e vírgula final
+                    "Data;Hist�rico;Valor(US$);Valor(R$)",   # Sem ponto e vírgula final
+                    "Data;Histrico;Valor(US$);Valor(R$)"     # Encoding issues sem ponto e vírgula
+                ]
+                
+                for pattern in bradesco_patterns:
+                    if pattern in content:
+                        return "bradesco"
                 
                 # Verificar formato Itaú (exemplo)
                 if "data,descricao,valor" in content.lower():
@@ -534,7 +544,6 @@ class FinanceClient:
         try:
             transacoes_processadas = []
             total_linhas = 0
-            transacoes_importadas = 0
             
             # Obter informações do cartão
             cartao = self.obter_cartao(cartao_id)
@@ -544,12 +553,23 @@ class FinanceClient:
             with open(arquivo_path, 'r', encoding='utf-8', errors='ignore') as file:
                 linhas = file.readlines()
             
-            # Encontrar a linha do cabeçalho
+            # Encontrar a linha do cabeçalho (pegar a ÚLTIMA ocorrência)
             linha_inicio = -1
+            bradesco_patterns = [
+                "Data;Histórico;Valor(US$);Valor(R$);",
+                "Data;Hist�rico;Valor(US$);Valor(R$);",
+                "Data;Histrico;Valor(US$);Valor(R$);",  # Encoding issues
+                "Data;Histórico;Valor(US$);Valor(R$)",   # Sem ponto e vírgula final
+                "Data;Hist�rico;Valor(US$);Valor(R$)",   # Sem ponto e vírgula final
+                "Data;Histrico;Valor(US$);Valor(R$)"     # Encoding issues sem ponto e vírgula
+            ]
+            
+            # Procurar pela ÚLTIMA ocorrência do cabeçalho
             for i, linha in enumerate(linhas):
-                if "Data;Histórico;Valor(US$);Valor(R$);" in linha or "Data;Hist�rico;Valor(US$);Valor(R$);" in linha:
-                    linha_inicio = i
-                    break
+                for pattern in bradesco_patterns:
+                    if pattern in linha:
+                        linha_inicio = i  # Continua procurando para pegar a última
+                        break
             
             if linha_inicio == -1:
                 raise Exception("Formato do arquivo Bradesco não reconhecido")
@@ -573,23 +593,29 @@ class FinanceClient:
                         valor_usd_str = partes[2].strip()
                         valor_brl_str = partes[3].strip()
                         
-                        # Converter data (formato DD/MM/YYYY)
+                        # Converter data (formato DD/MM/YYYY ou DD/MM)
                         if '/' in data_str:
-                            dia, mes, ano = data_str.split('/')
-                            data_transacao = f"{ano}-{mes.zfill(2)}-{dia.zfill(2)}"
+                            partes_data = data_str.split('/')
+                            if len(partes_data) == 3:  # DD/MM/YYYY
+                                dia, mes, ano = partes_data
+                                data_transacao = f"{ano}-{mes.zfill(2)}-{dia.zfill(2)}"
+                            elif len(partes_data) == 2:  # DD/MM (assumir ano atual)
+                                dia, mes = partes_data
+                                ano_atual = datetime.now().year
+                                data_transacao = f"{ano_atual}-{mes.zfill(2)}-{dia.zfill(2)}"
+                            else:
+                                continue  # Formato não reconhecido
                         else:
                             continue  # Pular se não conseguir converter data
                         
                         # Converter valor (formato brasileiro: 1.234,56)
                         valor_limpo = valor_brl_str.replace('.', '').replace(',', '.').replace('R$', '').strip()
-                        
                         # Remover caracteres não numéricos exceto ponto e hífen
                         valor_limpo = re.sub(r'[^0-9.,\-]', '', valor_limpo)
                         valor_limpo = valor_limpo.replace(',', '.')
                         
                         if valor_limpo:
                             valor = abs(float(valor_limpo))  # Usar valor absoluto
-                            
                             # Determinar tipo (assumir que valores são débitos por padrão em cartão)
                             tipo = TipoTransacao.DEBITO
                             
@@ -606,7 +632,20 @@ class FinanceClient:
                                     ja_existe = True
                                     break
                             
-                            if not ja_existe:
+                            # Filtrar transações que não são compras
+                            descricoes_ignorar = [
+                                'SALDO ANTERIOR',
+                                'PAGTO. POR DEB EM C/C',
+                                'PAGAMENTO',
+                                'ESTORNO',
+                                'JUROS',
+                                'MULTA',
+                                'ANUIDADE'
+                            ]
+                            
+                            deve_ignorar = any(termo in descricao.upper() for termo in descricoes_ignorar)
+                            
+                            if not ja_existe and not deve_ignorar:
                                 transacao_data = {
                                     'data_transacao': data_transacao,
                                     'descricao': descricao,
