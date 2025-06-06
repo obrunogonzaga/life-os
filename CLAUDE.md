@@ -100,8 +100,17 @@ life-os/
 - **Export de Dados**: Exportação completa para JSON
 - **Interface Rica**: Terminal UI com Rich library e navegação intuitiva
 
-### 💰 Finanças (Em breve)
-- Controle financeiro pessoal
+### 💰 Finanças (Implementado)
+- **Gerenciamento de Contas**: Cadastro de contas correntes, poupança e investimento
+- **Cartões de Crédito**: Gestão completa de cartões com bandeiras, limites e vinculação
+- **Sistema de Transações**: Registro de transações com suporte a parcelamento automático
+- **Compartilhamento com Alzi**: Flag "compartilhado com Alzi" para contas, cartões e transações
+- **Relatório de Gastos Compartilhados**: Menu específico para transações do mês compartilhadas
+- **Dashboard Financeiro**: Visão geral de saldos, limites e gastos mensais
+- **Persistência Inteligente**: MongoDB com fallback JSON automático
+- **CRUD Completo**: Criar, listar, editar e excluir contas, cartões e transações
+- **Cálculo de Parcelamento**: Sistema automático de divisão em parcelas para cartões
+- **Interface Rica**: Terminal UI com navegação intuitiva e formatação avançada
 
 ### 📝 Notas (Em breve)
 - Sistema de anotações e documentação pessoal
@@ -183,6 +192,101 @@ class TodoistLabel:
     color: str                        # Label color
     order: int                        # Label order
     is_favorite: bool                 # Favorite status
+```
+
+### Finance Data Structures
+```python
+@dataclass
+class ContaCorrente:
+    id: str                          # Unique account ID
+    nome: str                        # Account name
+    banco: str                       # Bank name
+    agencia: str                     # Branch number
+    conta: str                       # Account number
+    tipo: TipoConta                  # Account type (corrente, poupanca, investimento)
+    saldo_inicial: float             # Initial balance
+    saldo_atual: float               # Current balance
+    compartilhado_com_alzi: bool     # Shared with Alzi flag (default: False)
+    ativa: bool                      # Active status
+    created_at: Optional[str]        # Creation timestamp
+    updated_at: Optional[str]        # Last update timestamp
+
+@dataclass
+class CartaoCredito:
+    id: str                          # Unique card ID
+    nome: str                        # Card name
+    banco: str                       # Bank name
+    bandeira: BandeiraCartao         # Card brand (visa, mastercard, elo, etc.)
+    limite: float                    # Credit limit
+    limite_disponivel: float         # Available limit
+    conta_vinculada_id: Optional[str] # Linked checking account ID
+    dia_vencimento: int              # Due date (1-31)
+    dia_fechamento: int              # Closing date (1-31)
+    compartilhado_com_alzi: bool     # Shared with Alzi flag (default: False)
+    ativo: bool                      # Active status
+    created_at: Optional[str]        # Creation timestamp
+    updated_at: Optional[str]        # Last update timestamp
+
+@dataclass
+class Transacao:
+    id: str                          # Unique transaction ID
+    descricao: str                   # Transaction description
+    valor: float                     # Transaction amount
+    tipo: TipoTransacao              # Transaction type (debito/credito)
+    data_transacao: str              # Transaction date
+    categoria: Optional[str]         # Category
+    conta_id: Optional[str]          # Associated account ID
+    cartao_id: Optional[str]         # Associated card ID
+    parcelamento: List[Parcelamento] # Installment details
+    observacoes: Optional[str]       # Notes
+    status: StatusTransacao          # Transaction status
+    compartilhado_com_alzi: bool     # Shared with Alzi flag (default: False)
+    created_at: Optional[str]        # Creation timestamp
+    updated_at: Optional[str]        # Last update timestamp
+
+@dataclass
+class Parcelamento:
+    numero_parcela: int              # Installment number
+    total_parcelas: int              # Total installments
+    valor_parcela: float             # Installment amount
+    data_vencimento: str             # Due date
+    pago: bool                       # Paid status (default: False)
+
+@dataclass
+class ResumoFinanceiro:
+    total_contas: int                # Total accounts
+    total_cartoes: int               # Total credit cards
+    total_transacoes: int            # Total transactions (current month)
+    saldo_total_contas: float        # Total balance across accounts
+    limite_total_cartoes: float      # Total credit limit
+    limite_disponivel_cartoes: float # Total available credit
+    valor_total_gastos_mes: float    # Total expenses current month
+    valor_compartilhado_alzi_mes: float # Shared expenses with Alzi current month
+    contas_compartilhadas: int       # Number of shared accounts
+    cartoes_compartilhados: int      # Number of shared cards
+    transacoes_compartilhadas_mes: int # Number of shared transactions current month
+
+# Enums
+class TipoConta(Enum):
+    CORRENTE = "corrente"            # Checking account
+    POUPANCA = "poupanca"            # Savings account
+    INVESTIMENTO = "investimento"    # Investment account
+
+class BandeiraCartao(Enum):
+    VISA = "visa"
+    MASTERCARD = "mastercard"
+    ELO = "elo"
+    AMERICAN_EXPRESS = "american_express"
+    HIPERCARD = "hipercard"
+
+class TipoTransacao(Enum):
+    DEBITO = "debito"               # Outgoing transaction
+    CREDITO = "credito"             # Incoming transaction
+
+class StatusTransacao(Enum):
+    PENDENTE = "pendente"           # Pending
+    PROCESSADA = "processada"       # Processed
+    CANCELADA = "cancelada"         # Cancelled
 ```
 
 ### System Architecture
@@ -393,6 +497,166 @@ python -c "
 from modules.tasks import TasksModule
 app = TasksModule()
 print('Módulo de tarefas:', 'OK' if app.client else 'Token não configurado')
+"
+```
+
+### 🧪 Testes e Desenvolvimento - Módulo de Finanças
+```bash
+# Testar apenas o módulo de finanças
+python modules/finances.py
+
+# Testar cliente de finanças básico
+python -c "
+from utils.finance_client import FinanceClient
+client = FinanceClient()
+resumo = client.obter_resumo_financeiro()
+print(f'Resumo: {resumo.total_contas} contas, {resumo.total_cartoes} cartões')
+"
+
+# Testar criação de conta corrente
+python -c "
+from utils.finance_client import FinanceClient
+from utils.finance_models import TipoConta
+client = FinanceClient()
+conta = client.criar_conta(
+    nome='Conta Teste',
+    banco='Banco Teste',
+    agencia='1234',
+    conta='56789-0',
+    tipo=TipoConta.CORRENTE,
+    saldo_inicial=1000.0,
+    compartilhado_com_alzi=True
+)
+if conta:
+    print(f'Conta criada: {conta.nome} (ID: {conta.id[:8]}...)')
+    # Limpar teste
+    client.excluir_conta(conta.id)
+    print('Conta de teste removida')
+"
+
+# Testar criação de cartão de crédito
+python -c "
+from utils.finance_client import FinanceClient
+from utils.finance_models import BandeiraCartao
+client = FinanceClient()
+cartao = client.criar_cartao(
+    nome='Cartão Teste',
+    banco='Banco Teste',
+    bandeira=BandeiraCartao.VISA,
+    limite=5000.0,
+    dia_vencimento=10,
+    dia_fechamento=5,
+    compartilhado_com_alzi=True
+)
+if cartao:
+    print(f'Cartão criado: {cartao.nome} (ID: {cartao.id[:8]}...)')
+    # Limpar teste
+    client.excluir_cartao(cartao.id)
+    print('Cartão de teste removido')
+"
+
+# Testar transação com parcelamento
+python -c "
+from utils.finance_client import FinanceClient
+from utils.finance_models import TipoTransacao
+from datetime import datetime
+client = FinanceClient()
+
+# Criar conta temporária
+conta = client.criar_conta('Conta Temp', 'Banco', '1', '1', 'corrente', 1000)
+if conta:
+    # Criar transação parcelada
+    transacao = client.criar_transacao(
+        descricao='Compra Teste Parcelada',
+        valor=300.0,
+        tipo=TipoTransacao.DEBITO,
+        data_transacao=datetime.now().isoformat(),
+        categoria='Teste',
+        conta_id=conta.id,
+        parcelas=3,
+        compartilhado_com_alzi=True
+    )
+    if transacao:
+        print(f'Transação criada: {transacao.descricao}')
+        print(f'Parcelamento: {len(transacao.parcelamento)} parcelas')
+        for i, parcela in enumerate(transacao.parcelamento, 1):
+            print(f'  Parcela {i}: R$ {parcela.valor_parcela:.2f} - {parcela.data_vencimento[:10]}')
+        
+        # Limpar teste
+        client.excluir_transacao(transacao.id)
+        client.excluir_conta(conta.id)
+        print('Dados de teste removidos')
+"
+
+# Testar funcionalidades do módulo de finanças
+python -c "
+from modules.finances import FinancesModule
+module = FinancesModule()
+if module.client:
+    contas = module.client.listar_contas()
+    cartoes = module.client.listar_cartoes()
+    print(f'Status: {len(contas)} contas, {len(cartoes)} cartões')
+    
+    # Testar transações compartilhadas do mês
+    from datetime import datetime
+    hoje = datetime.now()
+    compartilhadas = module.client.obter_transacoes_mes(hoje.year, hoje.month, True)
+    print(f'Transações compartilhadas este mês: {len(compartilhadas)}')
+"
+
+# Testar conexão do banco de dados
+python -c "
+from utils.finance_client import FinanceClient
+client = FinanceClient()
+connected = client.db_manager.is_connected()
+print(f'Banco conectado: {\"Sim\" if connected else \"Não (usando fallback JSON)\"}')
+if connected:
+    print(f'Database: {client.db_manager.db_name}')
+"
+```
+
+## 💰 Configuração do Módulo de Finanças
+
+### Funcionalidades Principais
+
+#### 🏦 Gerenciamento de Contas
+- **Tipos Suportados**: Corrente, Poupança, Investimento
+- **Dados Completos**: Nome, banco, agência, conta, saldos
+- **Flag Alzi**: Marcar contas compartilhadas com Alzi
+- **Status**: Ativar/desativar contas
+- **Histórico**: Timestamps de criação e atualização
+
+#### 💳 Gerenciamento de Cartões
+- **Bandeiras**: Visa, Mastercard, Elo, American Express, Hipercard
+- **Limites**: Controle de limite total e disponível
+- **Vinculação**: Associar cartões a contas correntes
+- **Datas**: Vencimento e fechamento da fatura
+- **Flag Alzi**: Marcar cartões compartilhados
+
+#### 📝 Sistema de Transações
+- **Tipos**: Débito (saída) e Crédito (entrada)
+- **Parcelamento**: Automático para cartões de crédito
+- **Categorização**: Sistema flexível de categorias
+- **Múltiplas Origens**: Contas ou cartões
+- **Flag Alzi**: Marcar transações compartilhadas
+- **Status**: Pendente, processada, cancelada
+
+#### 👫 Relatório Alzi
+- **Visão Mensal**: Transações compartilhadas do mês atual
+- **Cálculo Automático**: Valor total e valor dividido (50%)
+- **Detalhamento**: Lista completa de gastos compartilhados
+- **Categorização**: Organização por categoria de gasto
+
+### Comandos de Uso Direto
+```bash
+# Acesso rápido ao módulo de finanças
+python main.py  # Depois selecionar opção 6
+
+# Teste de conectividade
+python -c "
+from modules.finances import FinancesModule
+app = FinancesModule()
+print('Módulo de finanças:', 'OK' if app.client else 'Erro na inicialização')
 "
 ```
 
