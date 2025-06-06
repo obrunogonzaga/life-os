@@ -122,9 +122,12 @@ class TasksModule:
             console.print("6. 🔄 Atualizar lista")
             console.print("7. 📁 Filtrar por projeto")
             console.print("8. 🎯 Filtrar por prioridade")
-            console.print("9. 🔙 Voltar")
+            console.print("9. 📅 Tarefas de hoje")
+            console.print("10. 📆 Próximos 7 dias")
+            console.print("11. ⚠️  Tarefas atrasadas")
+            console.print("12. 🔙 Voltar")
             
-            choice = Prompt.ask("\n[cyan]Escolha uma opção[/cyan]", default="9")
+            choice = Prompt.ask("\n[cyan]Escolha uma opção[/cyan]", default="12")
             
             if choice == "1":
                 self._add_task()
@@ -143,6 +146,12 @@ class TasksModule:
             elif choice == "8":
                 self._filter_by_priority()
             elif choice == "9":
+                self._show_tasks_today()
+            elif choice == "10":
+                self._show_tasks_next_7_days()
+            elif choice == "11":
+                self._show_overdue_tasks()
+            elif choice == "12":
                 break
             else:
                 console.print("[red]Opção inválida![/red]")
@@ -476,6 +485,70 @@ class TasksModule:
                 console.print("\n[yellow]Nenhuma tarefa com esta prioridade.[/yellow]")
         else:
             console.print("[red]Prioridade inválida![/red]")
+        
+        console.input("\nPressione Enter para continuar...")
+    
+    def _show_tasks_today(self):
+        """Mostra tarefas para hoje"""
+        console.clear()
+        console.print(Panel("📅 TAREFAS PARA HOJE", style="cyan"))
+        
+        tasks = self.client.get_tasks_today()
+        
+        if tasks:
+            self._display_tasks(tasks)
+        else:
+            console.print("\n[yellow]Nenhuma tarefa para hoje.[/yellow]")
+        
+        console.input("\nPressione Enter para continuar...")
+    
+    def _show_tasks_next_7_days(self):
+        """Mostra tarefas dos próximos 7 dias"""
+        console.clear()
+        console.print(Panel("📆 TAREFAS DOS PRÓXIMOS 7 DIAS", style="cyan"))
+        
+        tasks = self.client.get_tasks_next_7_days()
+        
+        if tasks:
+            # Organizar por data
+            from datetime import datetime
+            tasks_by_date = {}
+            
+            for task in tasks:
+                if task.due and 'date' in task.due:
+                    date_str = task.due['date']
+                    try:
+                        task_date = datetime.fromisoformat(date_str.replace('Z', '')).date()
+                        date_key = task_date.strftime("%d/%m/%Y")
+                        if date_key not in tasks_by_date:
+                            tasks_by_date[date_key] = []
+                        tasks_by_date[date_key].append(task)
+                    except (ValueError, KeyError):
+                        # Tarefas sem data válida
+                        if "Sem data" not in tasks_by_date:
+                            tasks_by_date["Sem data"] = []
+                        tasks_by_date["Sem data"].append(task)
+            
+            # Exibir por data
+            for date_str, date_tasks in sorted(tasks_by_date.items()):
+                console.print(f"\n[bold cyan]{date_str}[/bold cyan]")
+                self._display_tasks(date_tasks)
+        else:
+            console.print("\n[yellow]Nenhuma tarefa para os próximos 7 dias.[/yellow]")
+        
+        console.input("\nPressione Enter para continuar...")
+    
+    def _show_overdue_tasks(self):
+        """Mostra tarefas atrasadas"""
+        console.clear()
+        console.print(Panel("⚠️ TAREFAS ATRASADAS", style="red"))
+        
+        tasks = self.client.get_overdue_tasks()
+        
+        if tasks:
+            self._display_tasks(tasks)
+        else:
+            console.print("\n[green]Nenhuma tarefa atrasada! 🎉[/green]")
         
         console.input("\nPressione Enter para continuar...")
     
