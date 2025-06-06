@@ -441,6 +441,186 @@ class FinanceClient:
         
         return self.listar_transacoes(filtros)
 
+    def obter_transacoes_fatura_cartao(self, cartao_id: str, mes_fatura: int, ano_fatura: int) -> List[Transacao]:
+        """
+        Obtém transações de uma fatura específica do cartão
+        
+        Args:
+            cartao_id: ID do cartão
+            mes_fatura: Mês da fatura (vencimento)
+            ano_fatura: Ano da fatura
+            
+        Returns:
+            Lista de transações da fatura
+        """
+        try:
+            # Obter informações do cartão
+            cartao = self.obter_cartao(cartao_id)
+            if not cartao:
+                return []
+            
+            # Calcular período da fatura
+            # A fatura inclui transações do dia de fechamento do mês anterior até o dia de fechamento do mês atual
+            dia_fechamento = cartao.dia_fechamento
+            
+            # Data de início: dia após fechamento do mês anterior
+            if mes_fatura == 1:
+                mes_inicio = 12
+                ano_inicio = ano_fatura - 1
+            else:
+                mes_inicio = mes_fatura - 1
+                ano_inicio = ano_fatura
+            
+            # Ajustar data de início e fim considerando o dia de fechamento
+            from datetime import datetime, timedelta
+            
+            # Data de início: dia após o fechamento do mês anterior
+            data_inicio = datetime(ano_inicio, mes_inicio, dia_fechamento) + timedelta(days=1)
+            
+            # Data de fim: dia de fechamento do mês atual
+            # Tratar caso onde o dia de fechamento não existe no mês (ex: 31 em fevereiro)
+            try:
+                data_fim = datetime(ano_fatura, mes_fatura, dia_fechamento)
+            except ValueError:
+                # Se o dia não existir no mês, usar o último dia do mês
+                import calendar
+                ultimo_dia = calendar.monthrange(ano_fatura, mes_fatura)[1]
+                data_fim = datetime(ano_fatura, mes_fatura, min(dia_fechamento, ultimo_dia))
+            
+            # Filtros para buscar transações
+            filtros = {
+                "cartao_id": cartao_id,
+                "data_transacao": {
+                    "$gte": data_inicio.strftime("%Y-%m-%d"),
+                    "$lte": data_fim.strftime("%Y-%m-%d")
+                }
+            }
+            
+            return self.listar_transacoes(filtros)
+            
+        except Exception as e:
+            print(f"Erro ao obter transações da fatura: {e}")
+            return []
+
+    def listar_faturas_cartao(self, cartao_id: str, ano: int = None) -> List[Dict[str, Any]]:
+        """
+        Lista todas as faturas que possuem transações para um cartão específico
+        
+        Args:
+            cartao_id: ID do cartão
+            ano: Ano para filtrar (se None, usa ano atual)
+            
+        Returns:
+            Lista de dicionários com informações das faturas
+        """
+        try:
+            from collections import defaultdict
+            
+            if ano is None:
+                ano = datetime.now().year
+            
+            # Obter todas as transações do cartão no ano
+            filtros = {
+                "cartao_id": cartao_id,
+                "data_transacao": {
+                    "$gte": f"{ano}-01-01",
+                    "$lt": f"{ano + 1}-01-01"
+                }
+            }
+            
+            transacoes = self.listar_transacoes(filtros)
+            
+            if not transacoes:
+                return []
+            
+            # Obter informações do cartão
+            cartao = self.obter_cartao(cartao_id)
+            if not cartao:
+                return []
+            
+            # Agrupar transações por fatura
+            faturas = defaultdict(lambda: {
+                'transacoes': [],
+                'total': 0.0,
+                'total_compartilhado': 0.0,
+                'mes': 0,
+                'ano': 0
+            })
+            
+            for transacao in transacoes:
+                # Determinar a qual fatura a transação pertence
+                data_transacao = datetime.strptime(transacao.data_transacao[:10], "%Y-%m-%d")
+                
+                # Calcular mês/ano da fatura baseado na data da transação e dia de fechamento
+                dia_fechamento = cartao.dia_fechamento
+                
+                if data_transacao.day <= dia_fechamento:
+                    # Transação está na fatura do mesmo mês
+                    mes_fatura = data_transacao.month
+                    ano_fatura = data_transacao.year
+                else:
+                    # Transação está na fatura do próximo mês
+                    if data_transacao.month == 12:
+                        mes_fatura = 1
+                        ano_fatura = data_transacao.year + 1
+                    else:
+                        mes_fatura = data_transacao.month + 1
+                        ano_fatura = data_transacao.year
+                
+                chave_fatura = f"{ano_fatura}-{mes_fatura:02d}"
+                
+                faturas[chave_fatura]['transacoes'].append(transacao)
+                faturas[chave_fatura]['mes'] = mes_fatura
+                faturas[chave_fatura]['ano'] = ano_fatura
+                
+                if transacao.tipo == TipoTransacao.DEBITO:
+                    faturas[chave_fatura]['total'] += transacao.valor
+                    if transacao.compartilhado_com_alzi:
+                        faturas[chave_fatura]['total_compartilhado'] += transacao.valor
+            
+            # Converter para lista ordenada
+            lista_faturas = []
+            for chave, dados in sorted(faturas.items()):
+                # Calcular período da fatura
+                mes_fatura = dados['mes']
+                ano_fatura = dados['ano']
+                
+                if mes_fatura == 1:
+                    mes_inicio = 12
+                    ano_inicio = ano_fatura - 1
+                else:
+                    mes_inicio = mes_fatura - 1
+                    ano_inicio = ano_fatura
+                
+                try:
+                    data_inicio = datetime(ano_inicio, mes_inicio, dia_fechamento) + timedelta(days=1)
+                    data_fim = datetime(ano_fatura, mes_fatura, dia_fechamento)
+                except ValueError:
+                    # Se o dia não existir no mês, usar o último dia do mês
+                    import calendar
+                    ultimo_dia = calendar.monthrange(ano_fatura, mes_fatura)[1]
+                    data_fim = datetime(ano_fatura, mes_fatura, min(dia_fechamento, ultimo_dia))
+                    ultimo_dia_inicio = calendar.monthrange(ano_inicio, mes_inicio)[1]
+                    data_inicio = datetime(ano_inicio, mes_inicio, min(dia_fechamento, ultimo_dia_inicio)) + timedelta(days=1)
+                
+                lista_faturas.append({
+                    'mes': mes_fatura,
+                    'ano': ano_fatura,
+                    'periodo_inicio': data_inicio.strftime("%d/%m/%Y"),
+                    'periodo_fim': data_fim.strftime("%d/%m/%Y"),
+                    'vencimento': f"{cartao.dia_vencimento:02d}/{mes_fatura:02d}/{ano_fatura}",
+                    'total_transacoes': len(dados['transacoes']),
+                    'total_valor': dados['total'],
+                    'total_compartilhado': dados['total_compartilhado'],
+                    'transacoes': dados['transacoes']
+                })
+            
+            return lista_faturas
+            
+        except Exception as e:
+            print(f"Erro ao listar faturas do cartão: {e}")
+            return []
+
     def obter_resumo_financeiro(self) -> ResumoFinanceiro:
         """Gera um resumo financeiro completo"""
         try:

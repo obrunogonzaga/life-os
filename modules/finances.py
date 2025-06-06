@@ -660,8 +660,28 @@ class FinancesModule:
         input()
 
     def _listar_transacoes(self):
-        """Lista todas as transações"""
+        """Lista transações com opção de visualizar por fatura"""
+        self.console.clear()
         self.console.print(Panel("[bold blue]📋 Lista de Transações[/bold blue]", style="blue"))
+        
+        # Menu de opções
+        self.console.print("1. 📅 Todas as transações recentes")
+        self.console.print("2. 💳 Transações por fatura de cartão")
+        self.console.print("3. 📆 Transações por período")
+        
+        opcao = Prompt.ask("Escolha uma opção", choices=["1", "2", "3"])
+        
+        if opcao == "1":
+            self._listar_transacoes_recentes()
+        elif opcao == "2":
+            self._listar_transacoes_por_fatura()
+        elif opcao == "3":
+            self._listar_transacoes_por_periodo()
+    
+    def _listar_transacoes_recentes(self):
+        """Lista todas as transações recentes"""
+        self.console.clear()
+        self.console.print(Panel("[bold blue]📅 Transações Recentes[/bold blue]", style="blue"))
         
         try:
             transacoes = self.client.listar_transacoes()
@@ -712,6 +732,317 @@ class FinancesModule:
                 
         except Exception as e:
             self.console.print(f"[red]Erro ao listar transações: {e}[/red]")
+        
+        self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+        input()
+    
+    def _listar_transacoes_por_fatura(self):
+        """Lista transações de uma fatura específica do cartão"""
+        self.console.clear()
+        self.console.print(Panel("[bold red]💳 Transações por Fatura de Cartão[/bold red]", style="red"))
+        
+        try:
+            # Listar cartões disponíveis
+            cartoes = self.client.listar_cartoes()
+            if not cartoes:
+                self.console.print("[yellow]Nenhum cartão cadastrado.[/yellow]")
+                self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+                input()
+                return
+            
+            # Selecionar cartão
+            self.console.print("[bold cyan]Cartões disponíveis:[/bold cyan]")
+            for i, cartao in enumerate(cartoes, 1):
+                self.console.print(f"{i}. {cartao.nome} - {cartao.banco} (Fecha dia {cartao.dia_fechamento}, vence dia {cartao.dia_vencimento})")
+            
+            indice_cartao = IntPrompt.ask("Número do cartão", default=1) - 1
+            if not (0 <= indice_cartao < len(cartoes)):
+                self.console.print("[red]Cartão inválido.[/red]")
+                self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+                input()
+                return
+            
+            cartao = cartoes[indice_cartao]
+            
+            # Selecionar ano
+            hoje = datetime.now()
+            ano_atual = hoje.year
+            
+            self.console.print(f"\n[cyan]Ano atual: {ano_atual}[/cyan]")
+            ano_fatura = IntPrompt.ask("Ano das faturas", default=ano_atual)
+            
+            # Listar faturas disponíveis
+            self.console.print(f"\n[yellow]Carregando faturas de {cartao.nome} para {ano_fatura}...[/yellow]")
+            faturas = self.client.listar_faturas_cartao(cartao.id, ano_fatura)
+            
+            if not faturas:
+                self.console.print(f"[yellow]Nenhuma fatura encontrada para {ano_fatura}.[/yellow]")
+                self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+                input()
+                return
+            
+            # Exibir faturas disponíveis
+            self.console.clear()
+            self.console.print(Panel(f"[bold red]💳 Faturas de {cartao.nome} - {ano_fatura}[/bold red]", style="red"))
+            
+            faturas_table = Table(show_header=True, header_style="bold red")
+            faturas_table.add_column("#", style="yellow", width=3)
+            faturas_table.add_column("Fatura", style="cyan", width=10)
+            faturas_table.add_column("Período", style="white", width=25)
+            faturas_table.add_column("Vencimento", style="blue", width=12)
+            faturas_table.add_column("Transações", style="green", justify="center", width=12)
+            faturas_table.add_column("Total", style="green", justify="right", width=15)
+            faturas_table.add_column("Compartilhado", style="magenta", justify="right", width=15)
+            
+            for i, fatura in enumerate(faturas, 1):
+                compartilhado_str = f"R$ {fatura['total_compartilhado']:,.2f}" if fatura['total_compartilhado'] > 0 else "-"
+                faturas_table.add_row(
+                    str(i),
+                    f"{fatura['mes']:02d}/{fatura['ano']}",
+                    f"{fatura['periodo_inicio']} - {fatura['periodo_fim']}",
+                    fatura['vencimento'],
+                    str(fatura['total_transacoes']),
+                    f"R$ {fatura['total_valor']:,.2f}",
+                    compartilhado_str
+                )
+            
+            self.console.print(faturas_table)
+            self.console.print("\n[bold cyan]Opções:[/bold cyan]")
+            self.console.print("Digite o número da fatura para ver detalhes")
+            self.console.print("Digite 'E' para editar uma transação de fatura")
+            self.console.print("Digite 'M' para voltar ao menu")
+            
+            opcao = Prompt.ask("Escolha uma opção")
+            
+            if opcao.upper() == "M":
+                return
+            elif opcao.upper() == "E":
+                self._editar_fatura_transacao(cartao, faturas)
+                return
+            
+            try:
+                indice_fatura = int(opcao) - 1
+                if not (0 <= indice_fatura < len(faturas)):
+                    self.console.print("[red]Fatura inválida.[/red]")
+                    self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+                    input()
+                    return
+                
+                fatura_selecionada = faturas[indice_fatura]
+                mes_fatura = fatura_selecionada['mes']
+                ano_fatura = fatura_selecionada['ano']
+                
+            except ValueError:
+                self.console.print("[red]Opção inválida.[/red]")
+                self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+                input()
+                return
+            
+            # Obter transações da fatura
+            transacoes = self.client.obter_transacoes_fatura_cartao(cartao.id, mes_fatura, ano_fatura)
+            
+            if not transacoes:
+                self.console.print(f"[yellow]Nenhuma transação encontrada para a fatura {mes_fatura}/{ano_fatura}.[/yellow]")
+            else:
+                # Calcular período da fatura
+                dia_fechamento = cartao.dia_fechamento
+                if mes_fatura == 1:
+                    mes_inicio = 12
+                    ano_inicio = ano_fatura - 1
+                else:
+                    mes_inicio = mes_fatura - 1
+                    ano_inicio = ano_fatura
+                
+                self.console.print(f"\n[bold magenta]Fatura {cartao.nome} - {mes_fatura}/{ano_fatura}[/bold magenta]")
+                self.console.print(f"[dim]Período: {dia_fechamento+1}/{mes_inicio}/{ano_inicio} até {dia_fechamento}/{mes_fatura}/{ano_fatura}[/dim]")
+                self.console.print(f"[dim]Vencimento: {cartao.dia_vencimento}/{mes_fatura}/{ano_fatura}[/dim]\n")
+                
+                # Resumo da fatura
+                total_fatura = sum(t.valor for t in transacoes if t.tipo == TipoTransacao.DEBITO)
+                total_compartilhado = sum(t.valor for t in transacoes if t.tipo == TipoTransacao.DEBITO and t.compartilhado_com_alzi)
+                
+                self.console.print(f"[bold cyan]Total da fatura:[/bold cyan] R$ {total_fatura:,.2f}")
+                if total_compartilhado > 0:
+                    self.console.print(f"[bold magenta]Total compartilhado com Alzi:[/bold magenta] R$ {total_compartilhado:,.2f} (50% = R$ {total_compartilhado/2:,.2f})")
+                self.console.print(f"[bold cyan]Total de transações:[/bold cyan] {len(transacoes)}\n")
+                
+                # Tabela de transações
+                table = Table(show_header=True, header_style="bold red")
+                table.add_column("Data", style="cyan", width=12)
+                table.add_column("Descrição", style="white", width=30)
+                table.add_column("Valor", style="green", justify="right", width=12)
+                table.add_column("Categoria", style="magenta", width=15)
+                table.add_column("Alzi", style="yellow", justify="center", width=6)
+                
+                # Agrupar por categoria
+                categorias = {}
+                for transacao in sorted(transacoes, key=lambda x: x.data_transacao):
+                    alzi_icon = "✓" if transacao.compartilhado_com_alzi else "✗"
+                    
+                    valor_str = f"R$ {transacao.valor:,.2f}"
+                    if transacao.eh_parcelada:
+                        # Encontrar qual parcela é
+                        for parcela in transacao.parcelamento:
+                            if parcela.data_vencimento[:7] == f"{ano_fatura}-{mes_fatura:02d}":
+                                valor_str = f"R$ {parcela.valor_parcela:,.2f} ({parcela.numero_parcela}/{parcela.total_parcelas})"
+                                break
+                    
+                    table.add_row(
+                        transacao.data_transacao[:10],
+                        transacao.descricao[:30],
+                        valor_str,
+                        transacao.categoria or "Sem categoria",
+                        alzi_icon
+                    )
+                    
+                    # Agrupar por categoria
+                    cat = transacao.categoria or "Sem categoria"
+                    if cat not in categorias:
+                        categorias[cat] = 0
+                    categorias[cat] += transacao.valor
+                
+                self.console.print(table)
+                
+                # Resumo por categoria
+                if len(categorias) > 1:
+                    self.console.print("\n[bold cyan]Resumo por Categoria:[/bold cyan]")
+                    cat_table = Table(show_header=True, header_style="bold cyan")
+                    cat_table.add_column("Categoria", style="magenta")
+                    cat_table.add_column("Valor Total", style="green", justify="right")
+                    cat_table.add_column("% do Total", style="yellow", justify="right")
+                    
+                    for cat, valor in sorted(categorias.items(), key=lambda x: x[1], reverse=True):
+                        percentual = (valor / total_fatura * 100) if total_fatura > 0 else 0
+                        cat_table.add_row(cat, f"R$ {valor:,.2f}", f"{percentual:.1f}%")
+                    
+                    self.console.print(cat_table)
+        
+        except Exception as e:
+            self.console.print(f"[red]Erro ao listar transações por fatura: {e}[/red]")
+        
+        self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+        input()
+    
+    def _listar_transacoes_por_periodo(self):
+        """Lista transações por período personalizado"""
+        self.console.print("[yellow]Funcionalidade em desenvolvimento...[/yellow]")
+        self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+        input()
+    
+    def _editar_fatura_transacao(self, cartao, faturas):
+        """Permite editar qual fatura uma transação pertence"""
+        self.console.clear()
+        self.console.print(Panel(f"[bold yellow]✏️ Editar Fatura de Transação - {cartao.nome}[/bold yellow]", style="yellow"))
+        
+        try:
+            # Listar todas as transações do cartão no ano
+            todas_transacoes = []
+            for fatura in faturas:
+                todas_transacoes.extend(fatura['transacoes'])
+            
+            if not todas_transacoes:
+                self.console.print("[yellow]Nenhuma transação encontrada.[/yellow]")
+                self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+                input()
+                return
+            
+            # Ordenar transações por data
+            todas_transacoes.sort(key=lambda x: x.data_transacao, reverse=True)
+            
+            # Exibir transações para seleção
+            self.console.print("[bold cyan]Transações disponíveis:[/bold cyan]")
+            transacoes_table = Table(show_header=True, header_style="bold yellow")
+            transacoes_table.add_column("#", style="yellow", width=3)
+            transacoes_table.add_column("Data", style="cyan", width=12)
+            transacoes_table.add_column("Descrição", style="white", width=30)
+            transacoes_table.add_column("Valor", style="green", justify="right", width=12)
+            transacoes_table.add_column("Fatura Atual", style="blue", width=12)
+            
+            # Determinar fatura atual de cada transação
+            for i, transacao in enumerate(todas_transacoes[:20], 1):  # Mostrar apenas 20
+                # Encontrar a qual fatura pertence
+                fatura_atual = "N/A"
+                for fatura in faturas:
+                    if transacao in fatura['transacoes']:
+                        fatura_atual = f"{fatura['mes']:02d}/{fatura['ano']}"
+                        break
+                
+                transacoes_table.add_row(
+                    str(i),
+                    transacao.data_transacao[:10],
+                    transacao.descricao[:30],
+                    f"R$ {transacao.valor:,.2f}",
+                    fatura_atual
+                )
+            
+            self.console.print(transacoes_table)
+            
+            if len(todas_transacoes) > 20:
+                self.console.print(f"[dim]Mostrando 20 de {len(todas_transacoes)} transações[/dim]")
+            
+            # Selecionar transação
+            self.console.print("\n[bold cyan]Selecionar transação:[/bold cyan]")
+            indice_transacao = IntPrompt.ask("Número da transação para editar", default=1) - 1
+            
+            if not (0 <= indice_transacao < min(20, len(todas_transacoes))):
+                self.console.print("[red]Transação inválida.[/red]")
+                self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+                input()
+                return
+            
+            transacao_selecionada = todas_transacoes[indice_transacao]
+            
+            # Exibir faturas disponíveis para mover
+            self.console.print(f"\n[bold cyan]Movendo transação: {transacao_selecionada.descricao}[/bold cyan]")
+            self.console.print("[bold cyan]Faturas disponíveis:[/bold cyan]")
+            
+            for i, fatura in enumerate(faturas, 1):
+                self.console.print(f"{i}. {fatura['mes']:02d}/{fatura['ano']} - R$ {fatura['total_valor']:,.2f}")
+            
+            # Selecionar nova fatura
+            indice_nova_fatura = IntPrompt.ask("Número da fatura de destino", default=1) - 1
+            
+            if not (0 <= indice_nova_fatura < len(faturas)):
+                self.console.print("[red]Fatura inválida.[/red]")
+                self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+                input()
+                return
+            
+            nova_fatura = faturas[indice_nova_fatura]
+            
+            # Calcular nova data para a transação (baseada no período da fatura)
+            # Vamos colocar a transação no meio do período da fatura
+            periodo_inicio = datetime.strptime(nova_fatura['periodo_inicio'], "%d/%m/%Y")
+            periodo_fim = datetime.strptime(nova_fatura['periodo_fim'], "%d/%m/%Y")
+            
+            # Calcular data no meio do período
+            dias_diferenca = (periodo_fim - periodo_inicio).days
+            nova_data = periodo_inicio + timedelta(days=dias_diferenca // 2)
+            nova_data_str = nova_data.strftime("%Y-%m-%d")
+            
+            # Confirmar a mudança
+            self.console.print(f"\n[bold yellow]Confirmação da alteração:[/bold yellow]")
+            self.console.print(f"Transação: {transacao_selecionada.descricao}")
+            self.console.print(f"Data atual: {transacao_selecionada.data_transacao[:10]}")
+            self.console.print(f"Nova data: {nova_data_str}")
+            self.console.print(f"Nova fatura: {nova_fatura['mes']:02d}/{nova_fatura['ano']}")
+            
+            if Confirm.ask("\nConfirmar alteração?"):
+                # Atualizar a transação
+                sucesso = self.client.atualizar_transacao(
+                    transacao_selecionada.id,
+                    data_transacao=nova_data_str
+                )
+                
+                if sucesso:
+                    self.console.print(f"[green]✓ Transação movida para a fatura {nova_fatura['mes']:02d}/{nova_fatura['ano']} com sucesso![/green]")
+                else:
+                    self.console.print("[red]✗ Erro ao atualizar transação[/red]")
+            else:
+                self.console.print("[yellow]Alteração cancelada.[/yellow]")
+                
+        except Exception as e:
+            self.console.print(f"[red]Erro ao editar fatura da transação: {e}[/red]")
         
         self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
         input()
