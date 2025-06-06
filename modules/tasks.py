@@ -1074,7 +1074,7 @@ class TasksModule:
         console.print(Panel("⚙️ CONFIGURAÇÕES", style="cyan"))
         
         console.print("\n[cyan]Informações da conta:[/cyan]")
-        console.print(f"Token API: {'*' * 20}...{Config.get('TODOIST_API_TOKEN', '')[-4:]}")
+        console.print(f"Token API: {'*' * 20}...{(Config.TODOIST_API_TOKEN or '')[-4:]}")
         
         console.print("\n[cyan]Estatísticas de uso:[/cyan]")
         try:
