@@ -1557,24 +1557,123 @@ class FinancesModule:
         input()
 
     def _transacoes_compartilhadas_alzi(self):
-        """Lista transações compartilhadas com Alzi do mês atual"""
+        """Menu de transações compartilhadas com Alzi"""
+        while True:
+            self.console.clear()
+            self.console.print(Panel("[bold magenta]👫 Transações Compartilhadas com Alzi[/bold magenta]", style="magenta"))
+            
+            self.console.print("1. 📅 Fatura atual (período ativo)")
+            self.console.print("2. 💳 Visão por fatura de cartão")
+            self.console.print("3. 📊 Histórico mensal")
+            self.console.print("M. 🔙 Voltar")
+            
+            opcao = Prompt.ask("Escolha uma opção", choices=["1", "2", "3", "M", "m"])
+            
+            if opcao.upper() == "M":
+                break
+            elif opcao == "1":
+                self._visualizar_compartilhado_mensal()
+            elif opcao == "2":
+                self._visualizar_compartilhado_por_fatura()
+            elif opcao == "3":
+                self._historico_compartilhado_mensal()
+    
+    def _visualizar_compartilhado_mensal(self):
+        """Visualiza transações compartilhadas da fatura atual"""
         self.console.clear()
-        self.console.print(Panel("[bold magenta]👫 Transações Compartilhadas com Alzi[/bold magenta]", style="magenta"))
+        self.console.print(Panel("[bold magenta]📅 Transações Compartilhadas - Fatura Atual[/bold magenta]", style="magenta"))
         
         try:
             hoje = datetime.now()
-            transacoes = self.client.obter_transacoes_mes(hoje.year, hoje.month, compartilhadas_apenas=True)
             
-            if not transacoes:
-                self.console.print(f"[yellow]Nenhuma transação compartilhada encontrada para {hoje.strftime('%B/%Y')}.[/yellow]")
+            # Primeiro, vamos encontrar a fatura atual baseada na data de hoje
+            # Obter cartões compartilhados
+            cartoes_compartilhados = [c for c in self.client.listar_cartoes() if c.compartilhado_com_alzi]
+            
+            if not cartoes_compartilhados:
+                self.console.print("[yellow]Nenhum cartão compartilhado com Alzi encontrado.[/yellow]")
+                self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+                input()
+                return
+            
+            # Usar o primeiro cartão compartilhado para determinar a fatura atual
+            cartao = cartoes_compartilhados[0]
+            
+            # Calcular qual fatura estamos vivendo agora
+            # Baseado na lógica do cartão (fechamento dia 20, vencimento dia 1)
+            # Se hoje é 06/06 e fechamento é dia 20, estamos no período da fatura 07/2025
+            # (período 21/05 a 20/06, vence 01/07)
+            dia_fechamento = cartao.dia_fechamento
+            
+            if hoje.day > dia_fechamento:
+                # Estamos após o fechamento, então começou o período da próxima fatura
+                # Ex: 25/06 → período da fatura que vence em 08/2025
+                if hoje.month == 12:
+                    mes_fatura_atual = 2  # Jan + 1 = Fev (próximo ano)
+                    ano_fatura_atual = hoje.year + 1
+                elif hoje.month == 11:
+                    mes_fatura_atual = 1  # Dez + 1 = Jan (próximo ano)
+                    ano_fatura_atual = hoje.year + 1
+                else:
+                    mes_fatura_atual = hoje.month + 2
+                    ano_fatura_atual = hoje.year
+            else:
+                # Estamos antes/no dia do fechamento, então estamos no período da fatura atual
+                # Ex: 06/06 → período da fatura que vence em 07/2025
+                if hoje.month == 12:
+                    mes_fatura_atual = 1
+                    ano_fatura_atual = hoje.year + 1
+                else:
+                    mes_fatura_atual = hoje.month + 1
+                    ano_fatura_atual = hoje.year
+            
+            # Obter transações da fatura atual
+            transacoes = self.client.obter_transacoes_fatura_cartao(cartao.id, mes_fatura_atual, ano_fatura_atual)
+            transacoes_compartilhadas = [t for t in transacoes if t.compartilhado_com_alzi]
+            
+            # Se houver múltiplos cartões compartilhados, agregar todas as transações
+            if len(cartoes_compartilhados) > 1:
+                for cartao_adicional in cartoes_compartilhados[1:]:
+                    transacoes_adicionais = self.client.obter_transacoes_fatura_cartao(cartao_adicional.id, mes_fatura_atual, ano_fatura_atual)
+                    transacoes_compartilhadas.extend([t for t in transacoes_adicionais if t.compartilhado_com_alzi])
+            
+            meses_nomes = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+                          "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
+            
+            nome_mes_fatura = meses_nomes[mes_fatura_atual]
+            
+            self.console.print(f"[bold cyan]Fatura atual:[/bold cyan] {nome_mes_fatura}/{ano_fatura_atual}")
+            self.console.print(f"[bold cyan]Fechamento:[/bold cyan] Dia {dia_fechamento} de cada mês")
+            
+            if not transacoes_compartilhadas:
+                self.console.print(f"[yellow]Nenhuma transação compartilhada encontrada na fatura atual ({nome_mes_fatura}/{ano_fatura_atual}).[/yellow]")
             else:
                 # Resumo
-                total_debitos = sum(t.valor for t in transacoes if t.tipo == TipoTransacao.DEBITO)
-                total_creditos = sum(t.valor for t in transacoes if t.tipo == TipoTransacao.CREDITO)
+                total_debitos = sum(t.valor for t in transacoes_compartilhadas if t.tipo == TipoTransacao.DEBITO)
+                total_creditos = sum(t.valor for t in transacoes_compartilhadas if t.tipo == TipoTransacao.CREDITO)
                 saldo_compartilhado = total_creditos - total_debitos
                 
-                self.console.print(f"[bold cyan]Período:[/bold cyan] {hoje.strftime('%B/%Y')}")
-                self.console.print(f"[bold cyan]Total de transações:[/bold cyan] {len(transacoes)}")
+                # Calcular período da fatura
+                # Se estamos antes do fechamento, mostramos o período que começou no mês passado
+                if hoje.day > dia_fechamento:
+                    # Período atual: (mês atual, dia fechamento+1) até (próximo mês, dia fechamento)
+                    if hoje.month == 12:
+                        data_inicio = f"{dia_fechamento+1}/{hoje.month}/{hoje.year}"
+                        data_fim = f"{dia_fechamento}/01/{hoje.year+1}"
+                    else:
+                        data_inicio = f"{dia_fechamento+1}/{hoje.month}/{hoje.year}"
+                        data_fim = f"{dia_fechamento}/{hoje.month+1}/{hoje.year}"
+                else:
+                    # Período atual: (mês passado, dia fechamento+1) até (mês atual, dia fechamento)  
+                    if hoje.month == 1:
+                        data_inicio = f"{dia_fechamento+1}/12/{hoje.year-1}"
+                        data_fim = f"{dia_fechamento}/{hoje.month}/{hoje.year}"
+                    else:
+                        data_inicio = f"{dia_fechamento+1}/{hoje.month-1}/{hoje.year}"
+                        data_fim = f"{dia_fechamento}/{hoje.month}/{hoje.year}"
+                
+                self.console.print(f"[bold cyan]Período da fatura:[/bold cyan] {data_inicio} até {data_fim}")
+                self.console.print(f"[bold cyan]Total de transações compartilhadas:[/bold cyan] {len(transacoes_compartilhadas)}")
                 self.console.print(f"[bold red]Gastos compartilhados:[/bold red] R$ {total_debitos:,.2f}")
                 self.console.print(f"[bold green]Receitas compartilhadas:[/bold green] R$ {total_creditos:,.2f}")
                 self.console.print(f"[bold cyan]Saldo líquido:[/bold cyan] R$ {saldo_compartilhado:,.2f}")
@@ -1590,7 +1689,7 @@ class FinancesModule:
                 table.add_column("Categoria", style="yellow", width=15)
                 table.add_column("Origem", style="blue", width=15)
                 
-                for transacao in transacoes:
+                for transacao in transacoes_compartilhadas:
                     # Mostrar todas as transações compartilhadas
                     tipo_icon = "📤" if transacao.tipo == TipoTransacao.DEBITO else "📥"
                     
@@ -1620,6 +1719,281 @@ class FinancesModule:
                 
         except Exception as e:
             self.console.print(f"[red]Erro ao listar transações compartilhadas: {e}[/red]")
+        
+        self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+        input()
+    
+    def _visualizar_compartilhado_por_fatura(self):
+        """Visualiza transações compartilhadas por fatura de cartão"""
+        self.console.clear()
+        self.console.print(Panel("[bold magenta]💳 Transações Compartilhadas por Fatura[/bold magenta]", style="magenta"))
+        
+        try:
+            # Listar apenas cartões compartilhados com Alzi
+            cartoes = [c for c in self.client.listar_cartoes() if c.compartilhado_com_alzi]
+            
+            if not cartoes:
+                self.console.print("[yellow]Nenhum cartão compartilhado com Alzi encontrado.[/yellow]")
+                self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+                input()
+                return
+            
+            # Se houver apenas um cartão compartilhado, selecionar automaticamente
+            if len(cartoes) == 1:
+                cartao = cartoes[0]
+                self.console.print(f"[cyan]Cartão selecionado automaticamente: {cartao.nome}[/cyan]\n")
+            else:
+                # Mostrar cartões compartilhados para seleção
+                self.console.print("[bold cyan]Cartões compartilhados com Alzi:[/bold cyan]")
+                for i, cartao in enumerate(cartoes, 1):
+                    self.console.print(f"{i}. {cartao.nome} - {cartao.banco} (Vence dia {cartao.dia_vencimento})")
+                
+                indice_cartao = IntPrompt.ask("Número do cartão", default=1) - 1
+                if not (0 <= indice_cartao < len(cartoes)):
+                    self.console.print("[red]Cartão inválido.[/red]")
+                    self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+                    input()
+                    return
+                
+                cartao = cartoes[indice_cartao]
+            
+            # Selecionar ano
+            hoje = datetime.now()
+            ano_atual = hoje.year
+            
+            self.console.print(f"\n[cyan]Ano atual: {ano_atual}[/cyan]")
+            ano_fatura = IntPrompt.ask("Ano das faturas", default=ano_atual)
+            
+            # Obter todas as faturas do cartão
+            faturas = self.client.listar_faturas_cartao(cartao.id, ano_fatura)
+            
+            if not faturas:
+                self.console.print(f"[yellow]Nenhuma fatura encontrada para {ano_fatura}.[/yellow]")
+                self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+                input()
+                return
+            
+            # Filtrar apenas faturas com transações compartilhadas
+            faturas_compartilhadas = []
+            for fatura in faturas:
+                transacoes_compartilhadas = [t for t in fatura['transacoes'] if t.compartilhado_com_alzi]
+                if transacoes_compartilhadas:
+                    fatura_compartilhada = fatura.copy()
+                    fatura_compartilhada['transacoes_compartilhadas'] = transacoes_compartilhadas
+                    fatura_compartilhada['total_compartilhado_calculado'] = sum(
+                        t.valor for t in transacoes_compartilhadas if t.tipo == TipoTransacao.DEBITO
+                    )
+                    faturas_compartilhadas.append(fatura_compartilhada)
+            
+            if not faturas_compartilhadas:
+                self.console.print(f"[yellow]Nenhuma fatura compartilhada encontrada para {ano_fatura}.[/yellow]")
+                self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+                input()
+                return
+            
+            # Exibir resumo das faturas compartilhadas
+            self.console.clear()
+            self.console.print(Panel(f"[bold magenta]💳 Faturas Compartilhadas - {cartao.nome} ({ano_fatura})[/bold magenta]", style="magenta"))
+            
+            # Calcular totais do ano
+            total_ano = sum(f['total_compartilhado_calculado'] for f in faturas_compartilhadas)
+            
+            self.console.print(f"[bold cyan]Total compartilhado no ano:[/bold cyan] R$ {total_ano:,.2f}")
+            self.console.print(f"[bold cyan]Valor dividido (50%):[/bold cyan] R$ {total_ano/2:,.2f}")
+            self.console.print(f"[bold cyan]Média mensal:[/bold cyan] R$ {total_ano/len(faturas_compartilhadas):,.2f}\n")
+            
+            # Tabela resumo das faturas
+            faturas_table = Table(show_header=True, header_style="bold magenta")
+            faturas_table.add_column("#", style="yellow", width=3)
+            faturas_table.add_column("Fatura", style="cyan", width=10)
+            faturas_table.add_column("Período", style="white", width=25)
+            faturas_table.add_column("Transações", style="blue", justify="center", width=12)
+            faturas_table.add_column("Total Compartilhado", style="green", justify="right", width=18)
+            faturas_table.add_column("50%", style="magenta", justify="right", width=12)
+            
+            for i, fatura in enumerate(faturas_compartilhadas, 1):
+                faturas_table.add_row(
+                    str(i),
+                    f"{fatura['mes']:02d}/{fatura['ano']}",
+                    f"{fatura['periodo_inicio']} - {fatura['periodo_fim']}",
+                    str(len(fatura['transacoes_compartilhadas'])),
+                    f"R$ {fatura['total_compartilhado_calculado']:,.2f}",
+                    f"R$ {fatura['total_compartilhado_calculado']/2:,.2f}"
+                )
+            
+            self.console.print(faturas_table)
+            
+            # Opção para ver detalhes
+            self.console.print("\n[bold cyan]Digite o número da fatura para ver detalhes ou 'M' para voltar[/bold cyan]")
+            opcao = Prompt.ask("Escolha uma opção")
+            
+            if opcao.upper() != "M":
+                try:
+                    indice_fatura = int(opcao) - 1
+                    if 0 <= indice_fatura < len(faturas_compartilhadas):
+                        self._detalhar_fatura_compartilhada(cartao, faturas_compartilhadas[indice_fatura])
+                    else:
+                        self.console.print("[red]Fatura inválida.[/red]")
+                        self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+                        input()
+                except ValueError:
+                    self.console.print("[red]Opção inválida.[/red]")
+                    self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+                    input()
+                    
+        except Exception as e:
+            self.console.print(f"[red]Erro ao listar faturas compartilhadas: {e}[/red]")
+            self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+            input()
+    
+    def _detalhar_fatura_compartilhada(self, cartao, fatura):
+        """Exibe detalhes de uma fatura compartilhada específica"""
+        self.console.clear()
+        self.console.print(Panel(f"[bold magenta]📋 Detalhes da Fatura Compartilhada - {fatura['mes']:02d}/{fatura['ano']}[/bold magenta]", style="magenta"))
+        
+        try:
+            # Informações da fatura
+            self.console.print(f"[bold cyan]Cartão:[/bold cyan] {cartao.nome} - {cartao.banco}")
+            self.console.print(f"[bold cyan]Período:[/bold cyan] {fatura['periodo_inicio']} até {fatura['periodo_fim']}")
+            self.console.print(f"[bold cyan]Vencimento:[/bold cyan] {fatura['vencimento']}")
+            self.console.print()
+            
+            # Resumo financeiro
+            transacoes = fatura['transacoes_compartilhadas']
+            total_compartilhado = fatura['total_compartilhado_calculado']
+            
+            self.console.print(f"[bold green]Total compartilhado:[/bold green] R$ {total_compartilhado:,.2f}")
+            self.console.print(f"[bold magenta]Valor dividido (50%):[/bold magenta] R$ {total_compartilhado/2:,.2f}")
+            self.console.print(f"[bold cyan]Total de transações compartilhadas:[/bold cyan] {len(transacoes)}")
+            self.console.print()
+            
+            # Tabela de transações
+            table = Table(show_header=True, header_style="bold magenta", title="Transações Compartilhadas")
+            table.add_column("Data", style="cyan", width=12)
+            table.add_column("Descrição", style="white", width=35)
+            table.add_column("Valor", style="green", justify="right", width=12)
+            table.add_column("Categoria", style="yellow", width=15)
+            
+            # Agrupar por categoria
+            categorias = {}
+            
+            for transacao in sorted(transacoes, key=lambda x: x.data_transacao):
+                valor_str = f"R$ {transacao.valor:,.2f}"
+                if transacao.eh_parcelada:
+                    # Encontrar qual parcela é desta fatura
+                    for parcela in transacao.parcelamento:
+                        if parcela.data_vencimento[:7] == f"{fatura['ano']}-{fatura['mes']:02d}":
+                            valor_str = f"R$ {parcela.valor_parcela:,.2f} ({parcela.numero_parcela}/{parcela.total_parcelas})"
+                            break
+                
+                table.add_row(
+                    transacao.data_transacao[:10],
+                    transacao.descricao[:35],
+                    valor_str,
+                    transacao.categoria or "Sem categoria"
+                )
+                
+                # Somar por categoria
+                cat = transacao.categoria or "Sem categoria"
+                if cat not in categorias:
+                    categorias[cat] = 0
+                categorias[cat] += transacao.valor
+            
+            self.console.print(table)
+            
+            # Resumo por categoria
+            if len(categorias) > 1:
+                self.console.print("\n[bold cyan]Resumo por Categoria:[/bold cyan]")
+                cat_table = Table(show_header=True, header_style="bold cyan")
+                cat_table.add_column("Categoria", style="yellow")
+                cat_table.add_column("Valor Total", style="green", justify="right")
+                cat_table.add_column("% do Total", style="magenta", justify="right")
+                
+                for cat, valor in sorted(categorias.items(), key=lambda x: x[1], reverse=True):
+                    percentual = (valor / total_compartilhado * 100) if total_compartilhado > 0 else 0
+                    cat_table.add_row(cat, f"R$ {valor:,.2f}", f"{percentual:.1f}%")
+                
+                self.console.print(cat_table)
+                
+        except Exception as e:
+            self.console.print(f"[red]Erro ao detalhar fatura: {e}[/red]")
+        
+        self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
+        input()
+    
+    def _historico_compartilhado_mensal(self):
+        """Exibe histórico mensal de transações compartilhadas"""
+        self.console.clear()
+        self.console.print(Panel("[bold magenta]📊 Histórico Mensal Compartilhado[/bold magenta]", style="magenta"))
+        
+        try:
+            # Solicitar período
+            hoje = datetime.now()
+            ano = IntPrompt.ask("Ano", default=hoje.year)
+            
+            # Obter transações de todos os meses do ano
+            historico_mensal = []
+            
+            for mes in range(1, 13):
+                transacoes = self.client.obter_transacoes_mes(ano, mes, compartilhadas_apenas=True)
+                
+                if transacoes:
+                    total_debitos = sum(t.valor for t in transacoes if t.tipo == TipoTransacao.DEBITO)
+                    total_creditos = sum(t.valor for t in transacoes if t.tipo == TipoTransacao.CREDITO)
+                    
+                    historico_mensal.append({
+                        'mes': mes,
+                        'total_transacoes': len(transacoes),
+                        'total_debitos': total_debitos,
+                        'total_creditos': total_creditos,
+                        'saldo': total_creditos - total_debitos
+                    })
+            
+            if not historico_mensal:
+                self.console.print(f"[yellow]Nenhuma transação compartilhada encontrada em {ano}.[/yellow]")
+            else:
+                # Calcular totais do ano
+                total_anual_debitos = sum(m['total_debitos'] for m in historico_mensal)
+                total_anual_creditos = sum(m['total_creditos'] for m in historico_mensal)
+                saldo_anual = total_anual_creditos - total_anual_debitos
+                
+                # Resumo anual
+                self.console.print(f"[bold cyan]Resumo Anual {ano}:[/bold cyan]")
+                self.console.print(f"[bold red]Total de gastos:[/bold red] R$ {total_anual_debitos:,.2f}")
+                self.console.print(f"[bold green]Total de receitas:[/bold green] R$ {total_anual_creditos:,.2f}")
+                self.console.print(f"[bold cyan]Saldo anual:[/bold cyan] R$ {saldo_anual:,.2f}")
+                self.console.print(f"[bold magenta]Valor dividido (50%):[/bold magenta] R$ {saldo_anual/2:,.2f}")
+                self.console.print()
+                
+                # Tabela mensal
+                table = Table(show_header=True, header_style="bold magenta", title=f"Histórico Mensal - {ano}")
+                table.add_column("Mês", style="cyan")
+                table.add_column("Transações", style="blue", justify="center")
+                table.add_column("Gastos", style="red", justify="right")
+                table.add_column("Receitas", style="green", justify="right")
+                table.add_column("Saldo", style="yellow", justify="right")
+                table.add_column("50%", style="magenta", justify="right")
+                
+                meses_nomes = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+                              "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
+                
+                for dados in historico_mensal:
+                    mes_nome = meses_nomes[dados['mes'] - 1]
+                    saldo_mes = dados['saldo']
+                    
+                    table.add_row(
+                        mes_nome,
+                        str(dados['total_transacoes']),
+                        f"R$ {dados['total_debitos']:,.2f}",
+                        f"R$ {dados['total_creditos']:,.2f}",
+                        f"R$ {saldo_mes:,.2f}",
+                        f"R$ {saldo_mes/2:,.2f}"
+                    )
+                
+                self.console.print(table)
+                
+        except Exception as e:
+            self.console.print(f"[red]Erro ao gerar histórico: {e}[/red]")
         
         self.console.print("\n[dim]Pressione Enter para continuar...[/dim]")
         input()

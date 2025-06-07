@@ -343,7 +343,23 @@ class FinanceClient:
                 
                 # Aplicar filtros manualmente
                 for key, value in filtros.items():
-                    transacoes_data = [t for t in transacoes_data if t.get(key) == value]
+                    if key == "data_transacao" and isinstance(value, dict):
+                        # Filtro de data complexo (com $gte, $lt, etc.)
+                        def data_match(transacao_data):
+                            data_transacao = transacao_data.get(key, "")
+                            if "$gte" in value and data_transacao < value["$gte"]:
+                                return False
+                            if "$gt" in value and data_transacao <= value["$gt"]:
+                                return False
+                            if "$lte" in value and data_transacao > value["$lte"]:
+                                return False
+                            if "$lt" in value and data_transacao >= value["$lt"]:
+                                return False
+                            return True
+                        transacoes_data = [t for t in transacoes_data if data_match(t)]
+                    else:
+                        # Filtro simples
+                        transacoes_data = [t for t in transacoes_data if t.get(key) == value]
                 
                 # Ordenar por data (mais recente primeiro)
                 transacoes_data.sort(key=lambda x: x.get("data_transacao", ""), reverse=True)
@@ -524,12 +540,12 @@ class FinanceClient:
             if self.db_manager.is_connected():
                 doc = self.db_manager.collection(self.transacoes_collection).find_one({"id": transacao_id})
                 if doc:
-                    return self._doc_to_transacao(doc)
+                    return Transacao.from_dict(doc)
             else:
                 data = self._load_fallback_data()
                 for transacao_data in data["transacoes"]:
                     if transacao_data["id"] == transacao_id:
-                        return self._dict_to_transacao(transacao_data)
+                        return Transacao.from_dict(transacao_data)
             return None
         except Exception as e:
             print(f"Erro ao obter transação: {e}")
@@ -573,32 +589,49 @@ class FinanceClient:
                 return []
             
             # Calcular período da fatura
-            # A fatura inclui transações do dia de fechamento do mês anterior até o dia de fechamento do mês atual
+            # IMPORTANTE: A fatura com vencimento em MÊS X contém transações do mês ANTERIOR
+            # Ex: Fatura de JUNHO (venc 01/06) contém transações de 21/04 a 20/05
+            # Ex: Fatura de JULHO (venc 01/07) contém transações de 21/05 a 20/06
             dia_fechamento = cartao.dia_fechamento
             
-            # Data de início: dia após fechamento do mês anterior
+            # Para fatura de mês X, pegar transações do mês X-1
             if mes_fatura == 1:
-                mes_inicio = 12
-                ano_inicio = ano_fatura - 1
+                # Fatura de janeiro pega transações de dezembro
+                mes_transacoes = 12
+                ano_transacoes = ano_fatura - 1
             else:
-                mes_inicio = mes_fatura - 1
-                ano_inicio = ano_fatura
+                mes_transacoes = mes_fatura - 1
+                ano_transacoes = ano_fatura
+            
+            # Agora calcular o período correto
+            # Data de início: dia após fechamento do mês anterior ao mês de transações
+            if mes_transacoes == 1:
+                mes_inicio = 12
+                ano_inicio = ano_transacoes - 1
+            else:
+                mes_inicio = mes_transacoes - 1
+                ano_inicio = ano_transacoes
             
             # Ajustar data de início e fim considerando o dia de fechamento
             from datetime import datetime, timedelta
             
-            # Data de início: dia após o fechamento do mês anterior
-            data_inicio = datetime(ano_inicio, mes_inicio, dia_fechamento) + timedelta(days=1)
-            
-            # Data de fim: dia de fechamento do mês atual
-            # Tratar caso onde o dia de fechamento não existe no mês (ex: 31 em fevereiro)
+            # Data de início: dia após o fechamento
             try:
-                data_fim = datetime(ano_fatura, mes_fatura, dia_fechamento)
+                data_inicio = datetime(ano_inicio, mes_inicio, dia_fechamento) + timedelta(days=1)
             except ValueError:
                 # Se o dia não existir no mês, usar o último dia do mês
                 import calendar
-                ultimo_dia = calendar.monthrange(ano_fatura, mes_fatura)[1]
-                data_fim = datetime(ano_fatura, mes_fatura, min(dia_fechamento, ultimo_dia))
+                ultimo_dia = calendar.monthrange(ano_inicio, mes_inicio)[1]
+                data_inicio = datetime(ano_inicio, mes_inicio, min(dia_fechamento, ultimo_dia)) + timedelta(days=1)
+            
+            # Data de fim: dia de fechamento do mês de transações
+            try:
+                data_fim = datetime(ano_transacoes, mes_transacoes, dia_fechamento)
+            except ValueError:
+                # Se o dia não existir no mês, usar o último dia do mês
+                import calendar
+                ultimo_dia = calendar.monthrange(ano_transacoes, mes_transacoes)[1]
+                data_fim = datetime(ano_transacoes, mes_transacoes, min(dia_fechamento, ultimo_dia))
             
             # Filtros para buscar transações
             filtros = {
@@ -667,12 +700,18 @@ class FinanceClient:
                 # Calcular mês/ano da fatura baseado na data da transação e dia de fechamento
                 dia_fechamento = cartao.dia_fechamento
                 
-                if data_transacao.day <= dia_fechamento:
-                    # Transação está na fatura do mesmo mês
-                    mes_fatura = data_transacao.month
-                    ano_fatura = data_transacao.year
+                if data_transacao.day > dia_fechamento:
+                    # Transação após fechamento vai para fatura que vence em 2 meses
+                    # Ex: compra em 21/05 → fatura vence 01/07
+                    if data_transacao.month >= 11:  # Novembro ou Dezembro
+                        mes_fatura = data_transacao.month - 10  # 11->1, 12->2
+                        ano_fatura = data_transacao.year + 1
+                    else:
+                        mes_fatura = data_transacao.month + 2
+                        ano_fatura = data_transacao.year
                 else:
-                    # Transação está na fatura do próximo mês
+                    # Transação até o dia de fechamento vai para fatura do próximo mês
+                    # Ex: compra em 15/05 → fatura vence 01/06
                     if data_transacao.month == 12:
                         mes_fatura = 1
                         ano_fatura = data_transacao.year + 1
@@ -695,24 +734,34 @@ class FinanceClient:
             lista_faturas = []
             for chave, dados in sorted(faturas.items()):
                 # Calcular período da fatura
+                # IMPORTANTE: A fatura com vencimento em MÊS X contém transações do mês ANTERIOR
                 mes_fatura = dados['mes']
                 ano_fatura = dados['ano']
                 
+                # Para fatura de mês X, mostrar período do mês X-1
                 if mes_fatura == 1:
-                    mes_inicio = 12
-                    ano_inicio = ano_fatura - 1
+                    mes_transacoes = 12
+                    ano_transacoes = ano_fatura - 1
                 else:
-                    mes_inicio = mes_fatura - 1
-                    ano_inicio = ano_fatura
+                    mes_transacoes = mes_fatura - 1
+                    ano_transacoes = ano_fatura
+                
+                # Período: dia após fechamento do mês anterior até dia de fechamento do mês de transações
+                if mes_transacoes == 1:
+                    mes_inicio = 12
+                    ano_inicio = ano_transacoes - 1
+                else:
+                    mes_inicio = mes_transacoes - 1
+                    ano_inicio = ano_transacoes
                 
                 try:
                     data_inicio = datetime(ano_inicio, mes_inicio, dia_fechamento) + timedelta(days=1)
-                    data_fim = datetime(ano_fatura, mes_fatura, dia_fechamento)
+                    data_fim = datetime(ano_transacoes, mes_transacoes, dia_fechamento)
                 except ValueError:
                     # Se o dia não existir no mês, usar o último dia do mês
                     import calendar
-                    ultimo_dia = calendar.monthrange(ano_fatura, mes_fatura)[1]
-                    data_fim = datetime(ano_fatura, mes_fatura, min(dia_fechamento, ultimo_dia))
+                    ultimo_dia = calendar.monthrange(ano_transacoes, mes_transacoes)[1]
+                    data_fim = datetime(ano_transacoes, mes_transacoes, min(dia_fechamento, ultimo_dia))
                     ultimo_dia_inicio = calendar.monthrange(ano_inicio, mes_inicio)[1]
                     data_inicio = datetime(ano_inicio, mes_inicio, min(dia_fechamento, ultimo_dia_inicio)) + timedelta(days=1)
                 
