@@ -41,7 +41,30 @@ life-os/
 │   ├── __init__.py
 │   ├── news.py               # Módulo de notícias com interface completa
 │   ├── tasks.py              # Módulo de tarefas integrado ao Todoist
-│   └── tools.py              # Módulo de ferramentas e gerenciamento MongoDB
+│   ├── tools.py              # Módulo de ferramentas e gerenciamento MongoDB
+│   └── finances/             # Módulo de finanças - Arquitetura em camadas
+│       ├── __init__.py
+│       ├── domains/          # Camada de domínio - Lógica de negócios
+│       │   ├── __init__.py
+│       │   ├── account_domain.py      # Domínio de contas correntes
+│       │   ├── card_domain.py         # Domínio de cartões de crédito
+│       │   ├── transaction_domain.py  # Domínio de transações
+│       │   ├── period_domain.py       # Domínio de períodos e faturas
+│       │   ├── alzi_domain.py         # Domínio de gastos compartilhados
+│       │   ├── account_domain_data.py      # Camada de dados para contas
+│       │   ├── card_domain_data.py         # Camada de dados para cartões
+│       │   ├── transaction_domain_data.py  # Camada de dados para transações
+│       │   ├── period_domain_data.py       # Camada de dados para períodos
+│       │   └── alzi_domain_data.py         # Camada de dados para Alzi
+│       ├── services/         # Camada de serviços - Orquestração
+│       │   ├── __init__.py
+│       │   ├── account_service.py     # Serviços de contas
+│       │   ├── card_service.py        # Serviços de cartões
+│       │   ├── transaction_service.py # Serviços de transações
+│       │   ├── period_service.py      # Serviços de períodos
+│       │   ├── alzi_service.py        # Serviços de compartilhamento
+│       │   └── finance_service.py     # Serviço principal orchestrador
+│       └── ui/               # Camada de interface - Apresentação
 ├── scrapers/                 # Web scrapers para diferentes sites
 │   ├── __init__.py
 │   └── tabnews_scraper.py    # Scraper TabNews com extração de artigos detalhados
@@ -52,7 +75,25 @@ life-os/
 │   ├── database_manager.py   # Gerenciador MongoDB com fallbacks
 │   ├── news_aggregator.py    # Agrega notícias com controle de rate limiting
 │   ├── todoist_client.py     # Cliente da API do Todoist
+│   ├── finance_client.py     # Cliente legado do módulo de finanças
+│   ├── finance_models.py     # Modelos de dados financeiros
 │   └── test_connection.py    # Utilitário para testar conexões MongoDB
+├── tests/                    # Infraestrutura de testes automatizados
+│   ├── __init__.py
+│   ├── test_config.py        # Configuração centralizada de testes
+│   ├── run_services_tests.py # Runner personalizado para testes de services
+│   ├── test_account_service.py      # Testes para AccountService
+│   ├── test_card_service.py         # Testes para CardService
+│   ├── test_transaction_service.py  # Testes para TransactionService
+│   ├── test_period_service.py       # Testes para PeriodService
+│   ├── test_alzi_service.py         # Testes para AlziService
+│   ├── test_finance_service.py      # Testes para FinanceService
+│   ├── test_account_domain.py       # Testes para domínios (existentes)
+│   ├── test_card_domain.py
+│   ├── test_transaction_domain.py
+│   ├── test_period_domain.py
+│   ├── test_alzi_domain.py
+│   └── run_all_tests.py      # Runner para todos os testes
 ├── docker/                   # Configuração Docker
 │   └── mongo-init.js         # Script de inicialização do MongoDB
 ├── scripts/                  # Scripts de automação
@@ -61,6 +102,9 @@ life-os/
 ├── data/                     # Armazenamento local e cache
 │   ├── config.json          # Preferências do usuário
 │   └── news_cache.json      # Cache de fallback (JSON)
+├── docs/                     # Documentação do projeto
+│   ├── FINANCES_REFACTORING_PLAN.md  # Plano de refatoração do módulo
+│   └── REMOTE_MONGODB_SETUP.md       # Configuração MongoDB remoto
 ├── .env.example              # Template de configurações
 ├── docker-compose.yml        # Definição dos containers
 └── requirements.txt          # Dependências Python
@@ -101,6 +145,7 @@ life-os/
 - **Interface Rica**: Terminal UI com Rich library e navegação intuitiva
 
 ### 💰 Finanças (Implementado)
+- **Arquitetura em Camadas**: Domain-Driven Design com separação clara de responsabilidades
 - **Gerenciamento de Contas**: Cadastro de contas correntes, poupança e investimento
 - **Cartões de Crédito**: Gestão completa de cartões com bandeiras, limites e vinculação
 - **Sistema de Transações**: Registro de transações com suporte a parcelamento automático
@@ -111,6 +156,9 @@ life-os/
 - **CRUD Completo**: Criar, listar, editar e excluir contas, cartões e transações
 - **Cálculo de Parcelamento**: Sistema automático de divisão em parcelas para cartões
 - **Interface Rica**: Terminal UI com navegação intuitiva e formatação avançada
+- **Testes Abrangentes**: Cobertura completa com 2,549 linhas de código de teste
+- **Camada de Serviços**: 6 services principais com lógica de negócios robusta
+- **Infraestrutura de Teste**: Runner personalizado com relatórios detalhados e integração CI/CD
 
 ### 📝 Notas (Em breve)
 - Sistema de anotações e documentação pessoal
@@ -297,6 +345,10 @@ class StatusTransacao(Enum):
 - **Environment Management**: Flexible configuration via .env files
 - **API Integration**: RESTful clients for external services (Todoist REST v2 + Sync v9)
 - **Rich Terminal UI**: Advanced terminal interfaces with formatting and interactivity
+- **Domain-Driven Design**: Clean architecture with separated concerns in finance module
+- **Service Layer Pattern**: Business logic encapsulation with dependency injection
+- **Comprehensive Testing**: Unit tests, integration tests, and custom test runners
+- **CI/CD Ready**: Automated testing infrastructure with detailed reporting
 
 ## 🔀 Git Workflow - REGRAS IMPORTANTES
 
@@ -382,6 +434,49 @@ from modules.tools import MongoDBTool
 tool = MongoDBTool()
 tool.show_connection_status()
 tool.list_collections()
+"
+```
+
+### 🧪 Testes - Módulo de Finanças (Services)
+```bash
+# Executar todos os testes dos services
+python tests/run_services_tests.py
+
+# Executar testes de um service específico
+python tests/run_services_tests.py account
+python tests/run_services_tests.py card
+python tests/run_services_tests.py transaction
+python tests/run_services_tests.py period
+python tests/run_services_tests.py alzi
+python tests/run_services_tests.py finance
+
+# Executar apenas testes de integração
+python tests/run_services_tests.py --integration-only
+
+# Executar testes com modo verboso
+python tests/run_services_tests.py --verbose
+
+# Testar service específico diretamente
+python -m pytest tests/test_account_service.py -v
+python -m pytest tests/test_card_service.py -v
+python -m pytest tests/test_transaction_service.py -v
+
+# Verificar arquitetura dos services
+python -c "
+from modules.finances.services.account_service import AccountService
+from modules.finances.services.card_service import CardService
+from modules.finances.services.transaction_service import TransactionService
+from utils.database_manager import DatabaseManager
+
+db = DatabaseManager()
+account_service = AccountService(db)
+card_service = CardService(db)
+transaction_service = TransactionService(db)
+
+print('Services inicializados com sucesso:')
+print(f'- AccountService: {type(account_service).__name__}')
+print(f'- CardService: {type(card_service).__name__}')
+print(f'- TransactionService: {type(transaction_service).__name__}')
 "
 ### 🧪 Testes e Desenvolvimento - Módulo de Tarefas
 ```bash
@@ -617,6 +712,30 @@ if connected:
 
 ## 💰 Configuração do Módulo de Finanças
 
+### 🏗️ Arquitetura do Módulo
+
+#### Camada de Domínio (Domain Layer)
+- **account_domain.py**: Lógica de negócios para contas correntes
+- **card_domain.py**: Regras de negócios para cartões de crédito
+- **transaction_domain.py**: Validações e cálculos de transações
+- **period_domain.py**: Gestão de períodos e faturas
+- **alzi_domain.py**: Lógica de compartilhamento de gastos
+- **\*_domain_data.py**: Camada de acesso a dados para cada domínio
+
+#### Camada de Serviços (Service Layer)
+- **account_service.py**: Orquestração de operações de contas (487 linhas de teste)
+- **card_service.py**: Gerenciamento de cartões de crédito (445 linhas de teste)
+- **transaction_service.py**: Processamento de transações (368 linhas de teste)
+- **period_service.py**: Cálculos de períodos e faturas (197 linhas de teste)
+- **alzi_service.py**: Serviços de compartilhamento (301 linhas de teste)
+- **finance_service.py**: Orchestrador principal do módulo (283 linhas de teste)
+
+#### Infraestrutura de Testes
+- **Cobertura Total**: 2,549 linhas de código de teste
+- **Test Runner Customizado**: Relatórios detalhados e métricas
+- **Configuração Centralizada**: Factory methods para dados de teste
+- **Integração CI/CD**: Suporte completo para automação
+
 ### Funcionalidades Principais
 
 #### 🏦 Gerenciamento de Contas
@@ -625,6 +744,7 @@ if connected:
 - **Flag Alzi**: Marcar contas compartilhadas com Alzi
 - **Status**: Ativar/desativar contas
 - **Histórico**: Timestamps de criação e atualização
+- **Validações**: Business rules implementadas na camada de serviço
 
 #### 💳 Gerenciamento de Cartões
 - **Bandeiras**: Visa, Mastercard, Elo, American Express, Hipercard
@@ -632,6 +752,7 @@ if connected:
 - **Vinculação**: Associar cartões a contas correntes
 - **Datas**: Vencimento e fechamento da fatura
 - **Flag Alzi**: Marcar cartões compartilhados
+- **Validações**: Regras de negócio robustas
 
 #### 📝 Sistema de Transações
 - **Tipos**: Débito (saída) e Crédito (entrada)
@@ -640,12 +761,14 @@ if connected:
 - **Múltiplas Origens**: Contas ou cartões
 - **Flag Alzi**: Marcar transações compartilhadas
 - **Status**: Pendente, processada, cancelada
+- **Integração**: Atualização automática de saldos e limites
 
 #### 👫 Relatório Alzi
 - **Visão Mensal**: Transações compartilhadas do mês atual
 - **Cálculo Automático**: Valor total e valor dividido (50%)
 - **Detalhamento**: Lista completa de gastos compartilhados
 - **Categorização**: Organização por categoria de gasto
+- **Insights**: Análises automáticas de padrões de gasto
 
 ### Comandos de Uso Direto
 ```bash
@@ -658,6 +781,12 @@ from modules.finances import FinancesModule
 app = FinancesModule()
 print('Módulo de finanças:', 'OK' if app.client else 'Erro na inicialização')
 "
+
+# Executar testes dos services
+python tests/run_services_tests.py
+
+# Testar arquitetura de services
+python tests/run_services_tests.py --integration-only
 ```
 
 ## Future Features
