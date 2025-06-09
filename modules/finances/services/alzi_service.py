@@ -40,7 +40,7 @@ class AlziService:
         if ano < 1900 or ano > 2100:
             raise ValueError("Ano deve estar entre 1900 e 2100")
         
-        transacoes_compartilhadas = self.alzi_domain.get_shared_transactions_by_month(ano, mes)
+        transacoes_compartilhadas = self.alzi_data.get_shared_transactions_by_month(ano, mes)
         
         # Separar débitos e créditos
         debitos = [t for t in transacoes_compartilhadas if t.tipo == TipoTransacao.DEBITO]

@@ -26,8 +26,8 @@ class FinanceService:
     Coordena todos os outros services e fornece interface unificada
     """
     
-    def __init__(self):
-        self.db_manager = DatabaseManager()
+    def __init__(self, db_manager: Optional[DatabaseManager] = None):
+        self.db_manager = db_manager or DatabaseManager()
         
         # Inicializar services
         self.account_service = AccountService(self.db_manager)
