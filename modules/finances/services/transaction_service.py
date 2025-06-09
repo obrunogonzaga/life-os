@@ -128,7 +128,7 @@ class TransactionService:
         if not transaction_id:
             return None
         
-        return self.transaction_domain.get_transaction_by_id(transaction_id)
+        return self.transaction_data.get_transaction_by_id(transaction_id)
     
     def list_transactions(self, filters: Optional[Dict[str, Any]] = None) -> List[Transacao]:
         """
@@ -140,7 +140,7 @@ class TransactionService:
         Returns:
             Lista de transações que atendem aos critérios
         """
-        return self.transaction_domain.list_transactions(filters or {})
+        return self.transaction_data.list_transactions(filters or {})
     
     def get_transactions_by_month(self, ano: int, mes: int, 
                                  shared_only: bool = False) -> List[Transacao]:
@@ -239,7 +239,7 @@ class TransactionService:
             )
             self._update_balance_or_limit(updated_transaction)
         
-        return self.transaction_domain.update_transaction(transaction_id, **kwargs)
+        return self.transaction_data.update_transaction(transaction_id, **kwargs)
     
     def delete_transaction(self, transaction_id: str) -> bool:
         """
@@ -260,7 +260,7 @@ class TransactionService:
             raise ValueError("Transação não encontrada")
         
         # Deletar a transação
-        success = self.transaction_domain.delete_transaction(transaction_id)
+        success = self.transaction_data.delete_transaction(transaction_id)
         
         if success:
             # Reverter ajustes de saldo/limite

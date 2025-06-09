@@ -55,13 +55,97 @@ class CardDomainData:
     
     def get_card_by_id(self, card_id: str) -> Optional[CartaoCredito]:
         """Obtém um cartão pelo ID"""
-        # Implementação básica para testes
-        return None
+        try:
+            if self.db_manager.is_connected():
+                doc = self.db_manager.collection(self.collection_name).find_one({"id": card_id})
+                if doc:
+                    return CartaoCredito.from_dict(doc)
+            else:
+                # Fallback para arquivo JSON
+                cards = self._load_from_fallback()
+                for card_data in cards:
+                    if card_data.get('id') == card_id:
+                        return CartaoCredito.from_dict(card_data)
+            
+            return None
+        except Exception as e:
+            print(f"Erro ao buscar cartão por ID: {e}")
+            return None
     
     def list_cards(self, active_only: bool = True) -> List[CartaoCredito]:
         """Lista cartões"""
-        return []
+        try:
+            cards = []
+            
+            if self.db_manager.is_connected():
+                # Buscar no MongoDB
+                query = {"ativo": True} if active_only else {}
+                docs = self.db_manager.collection(self.collection_name).find(query)
+                for doc in docs:
+                    try:
+                        card = CartaoCredito.from_dict(doc)
+                        cards.append(card)
+                    except Exception as e:
+                        print(f"Erro ao converter cartão: {e}")
+                        continue
+            else:
+                # Fallback para arquivo JSON
+                cards_data = self._load_from_fallback()
+                for card_data in cards_data:
+                    if not active_only or card_data.get('ativo', True):
+                        try:
+                            card = CartaoCredito.from_dict(card_data)
+                            cards.append(card)
+                        except Exception as e:
+                            print(f"Erro ao converter cartão do fallback: {e}")
+                            continue
+            
+            return cards
+        except Exception as e:
+            print(f"Erro ao listar cartões: {e}")
+            return []
     
     def update_card(self, card_id: str, **kwargs) -> bool:
         """Atualiza um cartão"""
-        return True
+        try:
+            kwargs['updated_at'] = datetime.now().isoformat()
+            
+            if self.db_manager.is_connected():
+                # Atualizar no MongoDB
+                result = self.db_manager.collection(self.collection_name).update_one(
+                    {"id": card_id}, 
+                    {"$set": kwargs}
+                )
+                return result.modified_count > 0
+            else:
+                # Fallback para arquivo JSON
+                cards_data = self._load_from_fallback()
+                for card_data in cards_data:
+                    if card_data.get('id') == card_id:
+                        card_data.update(kwargs)
+                        self._save_to_fallback(cards_data)
+                        return True
+                return False
+            
+        except Exception as e:
+            print(f"Erro ao atualizar cartão: {e}")
+            return False
+
+    def _load_from_fallback(self) -> List[Dict[str, Any]]:
+        """Carrega cartões do arquivo JSON de fallback"""
+        try:
+            if self.fallback_file.exists():
+                with open(self.fallback_file, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            return []
+        except Exception as e:
+            print(f"Erro ao carregar fallback: {e}")
+            return []
+
+    def _save_to_fallback(self, cards_data: List[Dict[str, Any]]):
+        """Salva cartões no arquivo JSON de fallback"""
+        try:
+            with open(self.fallback_file, 'w', encoding='utf-8') as f:
+                json.dump(cards_data, f, indent=2, ensure_ascii=False, default=str)
+        except Exception as e:
+            print(f"Erro ao salvar fallback: {e}")

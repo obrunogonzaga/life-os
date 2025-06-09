@@ -53,7 +53,7 @@ class PeriodService:
         if not cartao:
             raise ValueError("Cartão não encontrado")
         
-        return self.period_domain.get_billing_period_transactions(cartao, mes_fatura, ano_fatura)
+        return self.period_data.get_billing_period_transactions(cartao, mes_fatura, ano_fatura)
     
     def list_card_invoices(self, cartao_id: str, ano: Optional[int] = None) -> List[Dict[str, Any]]:
         """
@@ -243,7 +243,7 @@ class PeriodService:
         Returns:
             Dicionário com datas calculadas
         """
-        return self.period_domain.calculate_billing_dates(cartao, mes_referencia, ano_referencia)
+        return self.period_data.calculate_billing_dates(cartao, mes_referencia, ano_referencia)
     
     def _group_transactions_by_invoice(self, transacoes: List[Transacao], 
                                      cartao: CartaoCredito) -> List[Dict[str, Any]]:
