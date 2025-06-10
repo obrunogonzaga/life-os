@@ -5,6 +5,7 @@ This module provides the user interface for managing financial transactions,
 including creation, listing, editing, and deletion of transactions.
 """
 
+from datetime import datetime
 from .base_ui import BaseUI
 from ..services.transaction_service import TransactionService
 from ..services.account_service import AccountService
@@ -56,18 +57,236 @@ class TransactionUI(BaseUI):
         )
     
     def create_transaction(self):
-        """Create a new transaction (placeholder)"""
+        """Create a new transaction"""
         self.clear()
         header = self.create_header_panel("➕ Criar Nova Transação")
         self.print(header)
         
-        self.show_info("Funcionalidade em desenvolvimento")
-        self.show_info("Aqui será possível:")
-        self.print("• Criar transações para contas ou cartões")
-        self.print("• Definir parcelamento automático")
-        self.print("• Categorizar transações")
-        self.print("• Marcar como compartilhada com Alzi")
-        self.print("• Validações de saldo e limite")
+        try:
+            # 1. Escolher tipo de origem (conta ou cartão)
+            self.show_info("Selecione o tipo de origem da transação:")
+            tipo_origem = self.get_text_input("Digite (1) para Conta ou (2) para Cartão: ")
+            
+            conta_id = None
+            cartao_id = None
+            
+            if tipo_origem == "1":
+                # Listar contas disponíveis
+                accounts = self.account_service.list_accounts(active_only=True)
+                if not accounts:
+                    self.show_error("Nenhuma conta ativa encontrada.")
+                    self.wait_for_enter()
+                    return
+                
+                # Mostrar contas
+                table = self.create_table(
+                    title="Contas Disponíveis",
+                    columns=["ID", "Nome", "Banco", "Saldo"]
+                )
+                
+                for i, acc in enumerate(accounts, 1):
+                    table.add_row(
+                        str(i),
+                        acc.nome,
+                        acc.banco,
+                        f"R$ {acc.saldo_atual:,.2f}"
+                    )
+                
+                self.print(table)
+                
+                # Selecionar conta
+                choice = self.get_text_input("\nDigite o número da conta: ")
+                try:
+                    index = int(choice) - 1
+                    if 0 <= index < len(accounts):
+                        conta_id = accounts[index].id
+                    else:
+                        self.show_error("Número inválido.")
+                        self.wait_for_enter()
+                        return
+                except ValueError:
+                    self.show_error("Entrada inválida.")
+                    self.wait_for_enter()
+                    return
+                    
+            elif tipo_origem == "2":
+                # Listar cartões disponíveis
+                cards = self.card_service.list_cards(active_only=True)
+                if not cards:
+                    self.show_error("Nenhum cartão ativo encontrado.")
+                    self.wait_for_enter()
+                    return
+                
+                # Mostrar cartões
+                table = self.create_table(
+                    title="Cartões Disponíveis",
+                    columns=["ID", "Nome", "Banco", "Limite Disponível"]
+                )
+                
+                for i, card in enumerate(cards, 1):
+                    table.add_row(
+                        str(i),
+                        card.nome,
+                        card.banco,
+                        f"R$ {card.limite_disponivel:,.2f}"
+                    )
+                
+                self.print(table)
+                
+                # Selecionar cartão
+                choice = self.get_text_input("\nDigite o número do cartão: ")
+                try:
+                    index = int(choice) - 1
+                    if 0 <= index < len(cards):
+                        cartao_id = cards[index].id
+                    else:
+                        self.show_error("Número inválido.")
+                        self.wait_for_enter()
+                        return
+                except ValueError:
+                    self.show_error("Entrada inválida.")
+                    self.wait_for_enter()
+                    return
+            else:
+                self.show_error("Opção inválida.")
+                self.wait_for_enter()
+                return
+            
+            # 2. Dados básicos da transação
+            self.print("\n")
+            self.show_info("Informe os dados da transação:")
+            
+            # Descrição
+            descricao = self.get_text_input("Descrição: ")
+            if not descricao:
+                self.show_error("Descrição é obrigatória.")
+                self.wait_for_enter()
+                return
+            
+            # Valor
+            valor_str = self.get_text_input("Valor (R$): ")
+            try:
+                valor = float(valor_str.replace(',', '.'))
+                if valor <= 0:
+                    raise ValueError("Valor deve ser positivo")
+            except ValueError:
+                self.show_error("Valor inválido.")
+                self.wait_for_enter()
+                return
+            
+            # Tipo (débito/crédito)
+            tipo_str = self.get_text_input("Tipo - (D)ébito ou (C)rédito: ").upper()
+            if tipo_str == 'D':
+                tipo = TipoTransacao.DEBITO
+            elif tipo_str == 'C':
+                tipo = TipoTransacao.CREDITO
+            else:
+                self.show_error("Tipo inválido.")
+                self.wait_for_enter()
+                return
+            
+            # Data da transação
+            data_str = self.get_text_input("Data (AAAA-MM-DD) ou Enter para hoje: ")
+            if not data_str:
+                from datetime import datetime
+                data_transacao = datetime.now().strftime("%Y-%m-%d")
+            else:
+                # Validar formato
+                try:
+                    from datetime import datetime
+                    datetime.strptime(data_str, "%Y-%m-%d")
+                    data_transacao = data_str
+                except ValueError:
+                    self.show_error("Formato de data inválido. Use AAAA-MM-DD.")
+                    self.wait_for_enter()
+                    return
+            
+            # 3. Categoria
+            categorias = ["Alimentação", "Transporte", "Moradia", "Saúde", "Educação", 
+                         "Lazer", "Compras", "Salário", "Investimento", "Outros"]
+            
+            self.print("\n")
+            self.show_info("Selecione uma categoria:")
+            for i, cat in enumerate(categorias, 1):
+                self.print(f"{i}. {cat}")
+            
+            cat_choice = self.get_text_input("\nNúmero da categoria (ou Enter para pular): ")
+            categoria = None
+            if cat_choice:
+                try:
+                    cat_index = int(cat_choice) - 1
+                    if 0 <= cat_index < len(categorias):
+                        categoria = categorias[cat_index]
+                except ValueError:
+                    pass
+            
+            # 4. Parcelamento (apenas para débitos em cartão)
+            parcelas = 1
+            if cartao_id and tipo == TipoTransacao.DEBITO:
+                parcelas_str = self.get_text_input("\nNúmero de parcelas (Enter para 1): ")
+                if parcelas_str:
+                    try:
+                        parcelas = int(parcelas_str)
+                        if parcelas < 1:
+                            parcelas = 1
+                    except ValueError:
+                        parcelas = 1
+            
+            # 5. Compartilhar com Alzi?
+            alzi_str = self.get_text_input("\nCompartilhar com Alzi? (S/N): ").upper()
+            compartilhado_com_alzi = alzi_str == 'S'
+            
+            # 6. Observações
+            observacoes = self.get_text_input("\nObservações (opcional): ")
+            
+            # 7. Confirmar transação
+            self.print("\n")
+            confirmation_panel = self.create_panel(
+                f"[bold]Confirmar Transação:[/]\n\n"
+                f"Descrição: {descricao}\n"
+                f"Valor: R$ {valor:,.2f}\n"
+                f"Tipo: {'Débito' if tipo == TipoTransacao.DEBITO else 'Crédito'}\n"
+                f"Data: {data_transacao}\n"
+                f"Categoria: {categoria or 'Não informada'}\n"
+                f"Origem: {'Conta' if conta_id else 'Cartão'}\n"
+                f"Parcelas: {parcelas}\n"
+                f"Alzi: {'Sim' if compartilhado_com_alzi else 'Não'}"
+            )
+            self.print(confirmation_panel)
+            
+            confirmar = self.get_text_input("\nConfirmar transação? (S/N): ").upper()
+            
+            if confirmar != 'S':
+                self.show_info("Transação cancelada.")
+                self.wait_for_enter()
+                return
+            
+            # Criar a transação
+            transaction = self.transaction_service.create_transaction(
+                descricao=descricao,
+                valor=valor,
+                tipo=tipo,
+                data_transacao=data_transacao,
+                categoria=categoria,
+                conta_id=conta_id,
+                cartao_id=cartao_id,
+                parcelas=parcelas,
+                observacoes=observacoes if observacoes else None,
+                compartilhado_com_alzi=compartilhado_com_alzi
+            )
+            
+            if transaction:
+                self.show_success("Transação criada com sucesso!")
+                
+                # Mostrar informações sobre parcelamento se aplicável
+                if parcelas > 1:
+                    self.show_info(f"Transação parcelada em {parcelas}x de R$ {valor/parcelas:,.2f}")
+                
+            else:
+                self.show_error("Erro ao criar transação.")
+            
+        except Exception as e:
+            self.show_error(f"Erro ao criar transação: {e}")
         
         self.wait_for_enter()
     
