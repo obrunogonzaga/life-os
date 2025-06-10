@@ -26,9 +26,10 @@ class TransactionUI(BaseUI):
             ("2", "📋 Listar Transações Recentes"),
             ("3", "🔍 Buscar Transações"),
             ("4", "📅 Transações por Período"),
-            ("5", "✏️ Editar Transação"),
-            ("6", "🗑️ Excluir Transação"),
-            ("7", "📊 Resumo de Transações"),
+            ("5", "💳 Faturas de Cartão"),
+            ("6", "✏️ Editar Transação"),
+            ("7", "🗑️ Excluir Transação"),
+            ("8", "📊 Resumo de Transações"),
             ("M", "🔙 Voltar ao Menu Principal")
         ]
     
@@ -42,9 +43,10 @@ class TransactionUI(BaseUI):
             "2": self.list_recent_transactions,
             "3": self.search_transactions,
             "4": self.list_by_period,
-            "5": self.edit_transaction,
-            "6": self.delete_transaction,
-            "7": self.show_summary
+            "5": self.show_card_invoices,
+            "6": self.edit_transaction,
+            "7": self.delete_transaction,
+            "8": self.show_summary
         }
         
         main_ui.run_submenu_loop(
@@ -182,6 +184,199 @@ class TransactionUI(BaseUI):
         self.print(header)
         
         self.show_info("Funcionalidade em desenvolvimento")
+        self.wait_for_enter()
+    
+    def show_card_invoices(self):
+        """Show credit card invoices grouped by month"""
+        self.clear()
+        header = self.create_header_panel("💳 Faturas de Cartão")
+        self.print(header)
+        
+        try:
+            # Listar cartões disponíveis
+            cards = self.card_service.list_cards(active_only=True)
+            if not cards:
+                self.show_warning("Nenhum cartão de crédito cadastrado.")
+                self.wait_for_enter()
+                return
+            
+            # Mostrar cartões para seleção
+            self.show_info("Selecione um cartão para visualizar as faturas:")
+            
+            table = self.create_table(
+                title="Cartões Disponíveis",
+                columns=["ID", "Nome", "Banco", "Fechamento", "Vencimento"]
+            )
+            
+            for i, card in enumerate(cards, 1):
+                table.add_row(
+                    str(i),
+                    card.nome,
+                    card.banco,
+                    f"Dia {card.dia_fechamento}",
+                    f"Dia {card.dia_vencimento}"
+                )
+            
+            self.print(table)
+            
+            # Solicitar seleção
+            choice = self.get_text_input("\nDigite o número do cartão (ou 'C' para cancelar): ")
+            
+            if choice.upper() == 'C':
+                return
+                
+            try:
+                index = int(choice) - 1
+                if 0 <= index < len(cards):
+                    selected_card = cards[index]
+                    self._show_invoice_details(selected_card.id)
+                else:
+                    self.show_error("Número inválido.")
+                    self.wait_for_enter()
+            except ValueError:
+                self.show_error("Entrada inválida.")
+                self.wait_for_enter()
+                
+        except Exception as e:
+            self.show_error(f"Erro ao mostrar faturas: {e}")
+            self.wait_for_enter()
+    
+    def _show_invoice_details(self, card_id: str):
+        """Show detailed invoices for a specific card"""
+        self.clear()
+        
+        try:
+            # Obter resumo de faturas dos últimos 6 meses
+            summary = self.transaction_service.get_card_invoices_summary(card_id)
+            
+            header = self.create_header_panel(f"💳 Faturas - {summary['card_name']}")
+            self.print(header)
+            
+            # Informações do cartão
+            info_panel = self.create_panel(
+                f"[bold]Fechamento:[/] Dia {summary['closing_day']}  |  "
+                f"[bold]Vencimento:[/] Dia {summary['due_day']}"
+            )
+            self.print(info_panel)
+            self.print("")
+            
+            # Criar tabela com resumo das faturas
+            table = self.create_table(
+                title="Resumo das Faturas (últimos 3 meses + próximos 2 meses)",
+                columns=["Mês/Ano", "Qtd Trans.", "Débitos", "Créditos", "Total Fatura"]
+            )
+            
+            for key in sorted(summary['invoices'].keys(), reverse=True):
+                invoice = summary['invoices'][key]
+                
+                # Formatar valores
+                debitos_str = f"R$ {invoice['total_debits']:,.2f}"
+                creditos_str = f"R$ {invoice['total_credits']:,.2f}" if invoice['total_credits'] > 0 else "-"
+                total_str = f"R$ {invoice['net_amount']:,.2f}"
+                
+                # Colorir total
+                if invoice['net_amount'] > 0:
+                    total_str = f"[red]{total_str}[/]"
+                
+                table.add_row(
+                    f"{invoice['month_name'][:3]}/{invoice['year']}",
+                    str(invoice['total_transactions']),
+                    debitos_str,
+                    creditos_str,
+                    total_str
+                )
+            
+            self.print(table)
+            self.print("")
+            
+            # Opção para ver detalhes de uma fatura específica
+            choice = self.get_text_input("Digite o mês/ano (MM/AAAA) para ver detalhes ou 'V' para voltar: ")
+            
+            if choice.upper() != 'V':
+                try:
+                    month, year = map(int, choice.split('/'))
+                    key = f"{year}-{month:02d}"
+                    
+                    if key in summary['invoices']:
+                        self._show_invoice_transactions(card_id, month, year, summary['invoices'][key])
+                    else:
+                        self.show_error("Mês/ano não encontrado.")
+                        self.wait_for_enter()
+                except:
+                    self.show_error("Formato inválido. Use MM/AAAA.")
+                    self.wait_for_enter()
+                    
+        except Exception as e:
+            self.show_error(f"Erro ao obter faturas: {e}")
+            self.wait_for_enter()
+    
+    def _show_invoice_transactions(self, card_id: str, month: int, year: int, invoice_data: dict):
+        """Show detailed transactions for a specific invoice"""
+        self.clear()
+        
+        header = self.create_header_panel(
+            f"💳 Fatura Detalhada - {invoice_data['month_name']}/{year}"
+        )
+        self.print(header)
+        
+        if not invoice_data['transactions']:
+            self.show_info("Nenhuma transação nesta fatura.")
+            self.wait_for_enter()
+            return
+        
+        # Criar tabela de transações
+        table = self.create_table(
+            title="Transações da Fatura",
+            columns=["Data", "Descrição", "Categoria", "Valor", "Parcela", "Alzi"]
+        )
+        
+        # Ordenar transações por data
+        transactions = sorted(invoice_data['transactions'], 
+                            key=lambda x: x.data_transacao)
+        
+        for trans in transactions:
+            # Formatar data
+            data = trans.data_transacao[:10]
+            
+            # Formatar valor
+            valor_str = f"R$ {trans.valor:,.2f}"
+            if trans.tipo == TipoTransacao.DEBITO:
+                valor_str = f"[red]{valor_str}[/]"
+            else:
+                valor_str = f"[green]+{valor_str}[/]"
+            
+            # Info de parcela
+            parcela_str = "-"
+            if trans.parcelamento:
+                for p in trans.parcelamento:
+                    if p.data_vencimento[:7] == f"{year}-{month:02d}":
+                        parcela_str = f"{p.numero_parcela}/{p.total_parcelas}"
+                        break
+            
+            # Flag Alzi
+            alzi_str = "✓" if trans.compartilhado_com_alzi else "-"
+            
+            table.add_row(
+                data,
+                trans.descricao[:35] + ("..." if len(trans.descricao) > 35 else ""),
+                trans.categoria or "-",
+                valor_str,
+                parcela_str,
+                alzi_str
+            )
+        
+        self.print(table)
+        self.print("")
+        
+        # Resumo da fatura
+        summary_panel = self.create_panel(
+            f"[bold]Total de transações:[/] {invoice_data['total_transactions']}  |  "
+            f"[bold]Total débitos:[/] R$ {invoice_data['total_debits']:,.2f}  |  "
+            f"[bold]Total créditos:[/] R$ {invoice_data['total_credits']:,.2f}  |  "
+            f"[bold red]Total fatura:[/] R$ {invoice_data['net_amount']:,.2f}"
+        )
+        self.print(summary_panel)
+        
         self.wait_for_enter()
     
     def show_summary(self):

@@ -177,6 +177,146 @@ class TransactionService:
         
         return self.list_transactions(filters)
     
+    def get_card_transactions_by_invoice(self, cartao_id: str, invoice_month: int, 
+                                       invoice_year: int) -> List[Transacao]:
+        """
+        Obtém transações de um cartão para uma fatura específica
+        
+        Args:
+            cartao_id: ID do cartão
+            invoice_month: Mês da fatura (vencimento)
+            invoice_year: Ano da fatura (vencimento)
+            
+        Returns:
+            Lista de transações da fatura
+        """
+        from .card_service import CardService
+        from ..domains.transaction_domain import TransactionDomain
+        
+        # Obter o cartão para pegar o dia de fechamento
+        card_service = CardService(self.db_manager)
+        card = card_service.get_card_by_id(cartao_id)
+        if not card:
+            raise ValueError("Cartão não encontrado")
+        
+        # Calcular período da fatura
+        start_date, end_date = TransactionDomain.calculate_invoice_period_for_card(
+            card.dia_fechamento, invoice_month, invoice_year
+        )
+        
+        # Buscar transações do período
+        filters = {
+            "cartao_id": cartao_id,
+            "data_transacao": {
+                "$gt": start_date.isoformat(),
+                "$lte": end_date.isoformat()
+            }
+        }
+        
+        return self.list_transactions(filters)
+    
+    def get_card_invoices_summary(self, cartao_id: str, 
+                                 start_month: Optional[int] = None,
+                                 start_year: Optional[int] = None,
+                                 end_month: Optional[int] = None,
+                                 end_year: Optional[int] = None) -> Dict[str, Any]:
+        """
+        Obtém resumo das faturas de um cartão agrupadas por mês
+        
+        Args:
+            cartao_id: ID do cartão
+            start_month: Mês inicial (padrão: 6 meses atrás)
+            start_year: Ano inicial
+            end_month: Mês final (padrão: mês atual)
+            end_year: Ano final
+            
+        Returns:
+            Dicionário com resumo das faturas por mês
+        """
+        from .card_service import CardService
+        from ..domains.transaction_domain import TransactionDomain
+        from datetime import date
+        
+        # Validar cartão
+        card_service = CardService(self.db_manager)
+        card = card_service.get_card_by_id(cartao_id)
+        if not card:
+            raise ValueError("Cartão não encontrado")
+        
+        # Definir período padrão se não especificado
+        today = date.today()
+        if not end_month or not end_year:
+            # Mostrar até 2 meses à frente para incluir transações futuras
+            end_month = today.month + 2
+            end_year = today.year
+            if end_month > 12:
+                end_month -= 12
+                end_year += 1
+        
+        if not start_month or not start_year:
+            # 6 meses atrás por padrão
+            start_month = today.month - 3
+            start_year = today.year
+            if start_month <= 0:
+                start_month += 12
+                start_year -= 1
+        
+        # Obter todas as transações do cartão no período
+        all_transactions = self.list_transactions({"cartao_id": cartao_id})
+        
+        # Agrupar por fatura usando o domain
+        grouped = TransactionDomain.group_transactions_by_invoice(
+            all_transactions, card.dia_fechamento
+        )
+        
+        # Filtrar e organizar por período solicitado
+        summary = {}
+        current_date = date(start_year, start_month, 1)
+        end_date = date(end_year, end_month, 1)
+        
+        while current_date <= end_date:
+            key = current_date.strftime("%Y-%m")
+            if key in grouped:
+                transactions = grouped[key]
+                total = sum(t.valor for t in transactions if t.tipo == TipoTransacao.DEBITO)
+                credits = sum(t.valor for t in transactions if t.tipo == TipoTransacao.CREDITO)
+                
+                summary[key] = {
+                    'month': current_date.month,
+                    'year': current_date.year,
+                    'month_name': current_date.strftime("%B"),
+                    'total_transactions': len(transactions),
+                    'total_debits': total,
+                    'total_credits': credits,
+                    'net_amount': total - credits,
+                    'transactions': transactions
+                }
+            else:
+                summary[key] = {
+                    'month': current_date.month,
+                    'year': current_date.year,
+                    'month_name': current_date.strftime("%B"),
+                    'total_transactions': 0,
+                    'total_debits': 0.0,
+                    'total_credits': 0.0,
+                    'net_amount': 0.0,
+                    'transactions': []
+                }
+            
+            # Próximo mês
+            if current_date.month == 12:
+                current_date = date(current_date.year + 1, 1, 1)
+            else:
+                current_date = date(current_date.year, current_date.month + 1, 1)
+        
+        return {
+            'card_id': cartao_id,
+            'card_name': card.nome,
+            'closing_day': card.dia_fechamento,
+            'due_day': card.dia_vencimento,
+            'invoices': summary
+        }
+    
     def update_transaction(self, transaction_id: str, **kwargs) -> bool:
         """
         Atualiza uma transação com validações
