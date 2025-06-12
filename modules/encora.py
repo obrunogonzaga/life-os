@@ -377,8 +377,13 @@ class EncoraModule:
                     registro["horario"],
                     tipos_nomes.get(registro["tipo"], registro["tipo"])
                 )
-        
+
         console.print(table)
+
+        previsao = self._prever_horario_saida(registros_hoje)
+        if previsao:
+            console.print(f"\n[bold yellow]Previsão de saída: {previsao}[/bold yellow]")
+
         if not show_ids:
             console.input("\nPressione Enter para continuar...")
         
@@ -734,6 +739,32 @@ class EncoraModule:
                 result['status'] = 'erro_calculo'
         
         return result
+
+    def _prever_horario_saida(self, registros: List[Dict]) -> Optional[str]:
+        """Calcula previsão de horário de saída baseado na entrada e almoço"""
+        calculo = self._calcular_horas_trabalhadas(registros)
+
+        # Não calcula previsão se já houver saída registrada ou sem entrada
+        if calculo['saida'] or not calculo['entrada']:
+            return None
+
+        config = self.get_configuracoes_ponto()
+        carga_horaria = config.get('carga_horaria_diaria', 8)
+
+        # Considerar 1h de almoço por padrão
+        duracao_almoco = 1
+        if calculo['inicio_almoco'] and calculo['fim_almoco']:
+            try:
+                inicio = datetime.strptime(calculo['inicio_almoco'], "%H:%M")
+                fim = datetime.strptime(calculo['fim_almoco'], "%H:%M")
+                if fim > inicio:
+                    duracao_almoco = (fim - inicio).total_seconds() / 3600
+            except ValueError:
+                pass
+
+        entrada_dt = datetime.strptime(calculo['entrada'], "%H:%M")
+        saida_prevista = entrada_dt + timedelta(hours=carga_horaria + duracao_almoco)
+        return saida_prevista.strftime("%H:%M")
     
     def _relatorio_semanal(self):
         """Relatório semanal de ponto com tabela detalhada"""
