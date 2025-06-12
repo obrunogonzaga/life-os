@@ -3,12 +3,12 @@ Alzi Service - Serviços relacionados aos gastos compartilhados com Alzi
 """
 
 from typing import List, Optional, Dict, Any
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from ..domains.alzi_domain_data import AlziDomainData
 from utils.database_manager import DatabaseManager
 from utils.finance_models import (
-    Transacao, ContaCorrente, CartaoCredito, TipoTransacao, ResumoFinanceiro
+    Transacao, TipoTransacao
 )
 
 
