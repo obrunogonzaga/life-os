@@ -31,14 +31,13 @@ class TransactionUI(BaseUI):
             ("6", "✏️ Editar Transação"),
             ("7", "🗑️ Excluir Transação"),
             ("8", "📊 Resumo de Transações"),
-            ("M", "🔙 Voltar ao Menu Principal")
+            ("0", "❌ Sair do Sistema"),
+            ("M", "🔙 Voltar ao Menu Principal"),
+            ("B", "⬅️ Voltar ao Menu Anterior")
         ]
     
     def show_menu(self):
         """Display the transaction management menu"""
-        from .main_menu_ui import MainMenuUI
-        main_ui = MainMenuUI()
-        
         action_handlers = {
             "1": self.create_transaction,
             "2": self.list_recent_transactions,
@@ -50,11 +49,15 @@ class TransactionUI(BaseUI):
             "8": self.show_summary
         }
         
-        main_ui.run_submenu_loop(
+        # Use the standardized menu loop from BaseUI
+        result = self.run_menu_loop(
             "📝 Gerenciamento de Transações",
             self.menu_options,
-            action_handlers
+            action_handlers,
+            show_navigation=True
         )
+        
+        return result
     
     def create_transaction(self):
         """Create a new transaction"""

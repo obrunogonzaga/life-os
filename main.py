@@ -1,11 +1,6 @@
 #!/usr/bin/env python3
 import os
 import sys
-from rich.console import Console
-from rich.table import Table
-from rich.panel import Panel
-from rich.prompt import Prompt
-from rich import box
 from datetime import datetime
 
 # Importar módulos do Life OS
@@ -14,48 +9,53 @@ from modules.tools import ToolsModule
 from modules.tasks import TasksModule
 from modules.encora import EncoraModule
 from modules.finances import FinancesModule
+from utils.base_ui import BaseUI
 
 
-console = Console()
-
-
-class LifeOS:
+class LifeOS(BaseUI):
     def __init__(self):
+        super().__init__()
         self.running = True
-        
-    def clear_screen(self):
-        os.system('clear' if os.name == 'posix' else 'cls')
+        self.menu_options = [
+            ("1", "📰 Notícias", "Últimas notícias de tecnologia"),
+            ("2", "🔧 Ferramentas", "Utilitários e gerenciamento"),
+            ("3", "📅 Agenda", "[dim italic]Em breve[/dim italic]"),
+            ("4", "✅ Tarefas", "Gerenciamento com Todoist"),
+            ("5", "🏢 Encora", "Ferramentas do trabalho"),
+            ("6", "💰 Finanças", "Gestão financeira pessoal"),
+            ("7", "📝 Notas", "[dim italic]Em breve[/dim italic]"),
+            ("8", "🎯 Hábitos", "[dim italic]Em breve[/dim italic]"),
+            ("0", "❌ Sair", "Encerrar o sistema")
+        ]
     
     def show_header(self):
         current_time = datetime.now().strftime("%H:%M")
         current_date = datetime.now().strftime("%d/%m/%Y")
         
-        console.print(Panel.fit(
+        header_content = (
             f"[bold cyan]🧠 LIFE OS[/bold cyan]\n"
             f"[dim]Sistema de Organização Pessoal[/dim]\n"
-            f"[dim]{current_date} • {current_time}[/dim]",
-            border_style="bright_blue"
-        ))
-        console.print()
+            f"[dim]{current_date} • {current_time}[/dim]"
+        )
+        
+        header_panel = self.create_panel(header_content, style="bright_blue")
+        self.print(header_panel)
+        self.print_newline()
     
     def show_menu(self):
-        table = Table(show_header=False, box=box.ROUNDED)
-        table.add_column("Opção", style="cyan", width=12)
-        table.add_column("Módulo", style="white")
-        table.add_column("Descrição", style="dim")
+        columns = [
+            ("Opção", "cyan", 12),
+            ("Módulo", "white", None),
+            ("Descrição", "dim", None)
+        ]
         
-        table.add_row("1", "📰 Notícias", "Últimas notícias de tecnologia")
-        table.add_row("2", "🔧 Ferramentas", "Utilitários e gerenciamento")
-        table.add_row("3", "📅 Agenda", "[dim italic]Em breve[/dim italic]")
-        table.add_row("4", "✅ Tarefas", "Gerenciamento com Todoist")
-        table.add_row("5", "🏢 Encora", "Ferramentas do trabalho")
-        table.add_row("6", "💰 Finanças", "Gestão financeira pessoal")
-        table.add_row("7", "📝 Notas", "[dim italic]Em breve[/dim italic]")
-        table.add_row("8", "🎯 Hábitos", "[dim italic]Em breve[/dim italic]")
-        table.add_row("0", "❌ Sair", "Encerrar o sistema")
+        data = []
+        for option, module, description in self.menu_options:
+            data.append([option, module, description])
         
-        console.print(table)
-        console.print()
+        menu_table = self.create_data_table(columns, data, "Menu Principal")
+        self.print(menu_table)
+        self.print_newline()
     
     def launch_news_module(self):
         """Lança o módulo de notícias"""
@@ -84,50 +84,64 @@ class LifeOS:
     
     def coming_soon(self, module_name):
         """Exibe mensagem de módulo em desenvolvimento"""
-        self.clear_screen()
+        self.clear()
         self.show_header()
         
-        console.print(Panel(
+        content = (
             f"[bold yellow]🚧 Módulo {module_name} em Desenvolvimento[/bold yellow]\n\n"
-            f"[dim]Este módulo estará disponível em breve![/dim]",
-            border_style="yellow",
-            padding=(2, 4)
-        ))
+            f"[dim]Este módulo estará disponível em breve![/dim]"
+        )
         
-        console.print("\n[dim]Pressione Enter para voltar ao menu principal...[/dim]")
-        input()
+        panel = self.create_panel(content, style="yellow")
+        self.print(panel)
+        
+        self.wait_for_enter("Pressione Enter para voltar ao menu principal...")
     
     def run(self):
+        """Run the main Life OS application with standardized navigation"""
+        action_handlers = {
+            "1": self.launch_news_module,
+            "2": self.launch_tools_module,
+            "3": lambda: self.coming_soon("Agenda"),
+            "4": self.launch_tasks_module,
+            "5": self.launch_encora_module,
+            "6": self.launch_finances_module,
+            "7": lambda: self.coming_soon("Notas"),
+            "8": lambda: self.coming_soon("Hábitos"),
+            "0": self.exit_system
+        }
+        
+        # Create menu options for the standardized menu system
+        menu_options = [(option, f"{module} - {desc}") for option, module, desc in self.menu_options]
+        
         while self.running:
-            self.clear_screen()
-            self.show_header()
-            self.show_menu()
-            
-            choice = Prompt.ask("Escolha um módulo", default="1")
-            
-            if choice == "1":
-                self.launch_news_module()
-            elif choice == "2":
-                self.launch_tools_module()
-            elif choice == "3":
-                self.coming_soon("Agenda")
-            elif choice == "4":
-                self.launch_tasks_module()
-            elif choice == "5":
-                self.launch_encora_module()
-            elif choice == "6":
-                self.launch_finances_module()
-            elif choice == "7":
-                self.coming_soon("Notas")
-            elif choice == "8":
-                self.coming_soon("Hábitos")
-            elif choice == "0":
-                self.running = False
-                console.print("\n[bold green]Até logo! Tenha um ótimo dia! 👋[/bold green]")
-            else:
-                console.print("\n[red]Opção inválida![/red]")
-                console.print("[dim]Pressione Enter para continuar...[/dim]")
-                input()
+            try:
+                self.clear()
+                self.show_header()
+                self.show_menu()
+                
+                # Get user choice without automatic navigation (main menu handles 0 differently)
+                choices = [option[0] for option in self.menu_options]
+                choice = self.get_menu_choice("Escolha um módulo", choices, default="1")
+                
+                # Handle the choice
+                if choice in action_handlers:
+                    action_handlers[choice]()
+                else:
+                    self.show_error(f"Opção '{choice}' não reconhecida")
+                    self.wait_for_enter()
+                    
+            except KeyboardInterrupt:
+                self.show_warning("Sistema interrompido pelo usuário")
+                self.exit_system()
+            except Exception as e:
+                self.handle_exception(e, "sistema principal")
+                self.wait_for_enter()
+    
+    def exit_system(self):
+        """Exit the Life OS system"""
+        self.running = False
+        self.show_success("Até logo! Tenha um ótimo dia! 👋")
 
 
 if __name__ == "__main__":
@@ -135,5 +149,6 @@ if __name__ == "__main__":
         app = LifeOS()
         app.run()
     except KeyboardInterrupt:
-        console.print("\n\n[bold red]Sistema interrompido pelo usuário[/bold red]")
+        app = LifeOS()  # Create instance for UI methods
+        app.show_warning("Sistema interrompido pelo usuário")
         sys.exit(0)
