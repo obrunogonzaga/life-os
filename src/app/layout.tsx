@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { Sidebar } from '@/components/Sidebar';
+import { ThemeProvider } from '@/components/ThemeProvider';
 import { getAllDocuments } from '@/lib/documents';
 
 // Force dynamic rendering so sidebar updates after deletions
@@ -22,14 +23,16 @@ export default function RootLayout({
   const documents = getAllDocuments();
 
   return (
-    <html lang="en" className="dark">
-      <body className={`${inter.className} bg-neutral-950 text-neutral-100 antialiased`}>
-        <div className="flex min-h-screen">
-          <Sidebar documents={documents} />
-          <main className="flex-1 overflow-auto">
-            {children}
-          </main>
-        </div>
+    <html lang="en" className="dark" suppressHydrationWarning>
+      <body className={`${inter.className} bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 antialiased transition-colors`}>
+        <ThemeProvider>
+          <div className="flex min-h-screen">
+            <Sidebar documents={documents} />
+            <main className="flex-1 overflow-auto">
+              {children}
+            </main>
+          </div>
+        </ThemeProvider>
       </body>
     </html>
   );

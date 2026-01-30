@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { DocumentMeta, DocumentType } from '@/lib/types';
+import { ThemeToggle } from './ThemeToggle';
 
 interface SidebarProps {
   documents: DocumentMeta[];
@@ -38,13 +39,14 @@ export function Sidebar({ documents }: SidebarProps) {
   const typeOrder: DocumentType[] = ['journal', 'concept', 'decision', 'note', 'reference'];
 
   return (
-    <aside className="w-64 h-screen bg-neutral-900 border-r border-neutral-800 flex flex-col">
+    <aside className="w-64 h-screen bg-neutral-100 dark:bg-neutral-900 border-r border-neutral-200 dark:border-neutral-800 flex flex-col transition-colors">
       {/* Header */}
-      <div className="p-4 border-b border-neutral-800">
-        <Link href="/" className="flex items-center gap-2 text-white font-semibold">
+      <div className="p-4 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
+        <Link href="/" className="flex items-center gap-2 text-neutral-900 dark:text-white font-semibold">
           <span className="text-xl">🧠</span>
           <span>life-os</span>
         </Link>
+        <ThemeToggle />
       </div>
 
       {/* Document List */}
@@ -70,8 +72,8 @@ export function Sidebar({ documents }: SidebarProps) {
                         className={`
                           block px-2 py-1.5 rounded text-sm transition-colors
                           ${isActive
-                            ? 'bg-neutral-800 text-white'
-                            : 'text-neutral-400 hover:text-white hover:bg-neutral-800/50'
+                            ? 'bg-neutral-200 dark:bg-neutral-800 text-neutral-900 dark:text-white'
+                            : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-200/50 dark:hover:bg-neutral-800/50'
                           }
                         `}
                       >
@@ -87,7 +89,7 @@ export function Sidebar({ documents }: SidebarProps) {
       </nav>
 
       {/* Footer */}
-      <div className="p-4 border-t border-neutral-800 text-xs text-neutral-500">
+      <div className="p-4 border-t border-neutral-200 dark:border-neutral-800 text-xs text-neutral-500">
         {documents.length} documents
       </div>
     </aside>
