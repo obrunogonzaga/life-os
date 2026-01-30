@@ -1,6 +1,7 @@
 'use client';
 
-import Link from 'next/link';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
@@ -19,47 +20,96 @@ const typeColors: Record<string, string> = {
 };
 
 export function MarkdownViewer({ document }: MarkdownViewerProps) {
+  const router = useRouter();
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const typeColor = typeColors[document.type] || typeColors.note;
 
-  const formatDate = (dateStr: string) => {
-    if (!dateStr) return '';
-    const date = new Date(dateStr);
-    const weekday = date.toLocaleDateString('en-US', { weekday: 'long' });
-    const formatted = date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-    return `${formatted} — ${weekday}`;
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const response = await fetch('/api/documents', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug: document.slug }),
+      });
+
+      if (response.ok) {
+        router.push('/');
+        router.refresh();
+      } else {
+        const data = await response.json();
+        alert(`Erro ao deletar: ${data.error}`);
+      }
+    } catch (error) {
+      alert('Erro ao deletar documento');
+    } finally {
+      setIsDeleting(false);
+      setShowConfirm(false);
+    }
   };
 
   return (
-    <article className="max-w-3xl mx-auto py-10 px-8">
+    <article className="max-w-3xl mx-auto">
       {/* Header */}
-      <header className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <span className={`px-2.5 py-1 text-xs font-medium rounded-md border ${typeColor}`}>
-            {document.type}
-          </span>
-          <Link
-            href={`/edit/${document.slug}`}
-            className="px-3 py-1.5 text-sm bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded-md transition-colors"
-          >
-            ✏️ Edit
-          </Link>
+      <header className="mb-8 pb-6 border-b border-neutral-800">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <span className={`px-2 py-0.5 text-xs font-medium rounded border ${typeColor}`}>
+              {document.type}
+            </span>
+            {document.date && (
+              <time className="text-sm text-neutral-500">
+                {new Date(document.date).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                })}
+              </time>
+            )}
+          </div>
+          
+          {/* Delete Button */}
+          {!showConfirm ? (
+            <button
+              onClick={() => setShowConfirm(true)}
+              className="p-2 text-neutral-500 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors"
+              title="Deletar documento"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 6h18" />
+                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                <line x1="10" y1="11" x2="10" y2="17" />
+                <line x1="14" y1="11" x2="14" y2="17" />
+              </svg>
+            </button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-neutral-400">Deletar?</span>
+              <button
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="px-3 py-1 text-sm bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded transition-colors disabled:opacity-50"
+              >
+                {isDeleting ? '...' : 'Sim'}
+              </button>
+              <button
+                onClick={() => setShowConfirm(false)}
+                className="px-3 py-1 text-sm bg-neutral-800 text-neutral-400 hover:bg-neutral-700 rounded transition-colors"
+              >
+                Não
+              </button>
+            </div>
+          )}
         </div>
-        <h1 className="text-3xl font-bold text-white tracking-tight">{document.title}</h1>
-        {document.date && (
-          <time className="block mt-2 text-base text-neutral-400">
-            {formatDate(document.date)}
-          </time>
-        )}
+        <h1 className="text-3xl font-bold text-white">{document.title}</h1>
         {document.tags.length > 0 && (
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="mt-3 flex flex-wrap gap-2">
             {document.tags.map((tag) => (
               <span
                 key={tag}
-                className="px-2.5 py-1 text-xs bg-neutral-800/50 text-neutral-400 rounded-md"
+                className="px-2 py-0.5 text-xs bg-neutral-800 text-neutral-400 rounded"
               >
                 #{tag}
               </span>
@@ -69,85 +119,23 @@ export function MarkdownViewer({ document }: MarkdownViewerProps) {
       </header>
 
       {/* Content */}
-      <div className="document-content">
+      <div className="prose prose-invert prose-neutral max-w-none
+        prose-headings:font-semibold
+        prose-h1:text-2xl prose-h1:mt-8 prose-h1:mb-4
+        prose-h2:text-xl prose-h2:mt-6 prose-h2:mb-3
+        prose-h3:text-lg prose-h3:mt-4 prose-h3:mb-2
+        prose-p:text-neutral-300 prose-p:leading-relaxed
+        prose-a:text-blue-400 prose-a:no-underline hover:prose-a:underline
+        prose-strong:text-white
+        prose-code:text-pink-400 prose-code:bg-neutral-800 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-sm
+        prose-pre:bg-neutral-900 prose-pre:border prose-pre:border-neutral-800
+        prose-blockquote:border-l-blue-500 prose-blockquote:text-neutral-400
+        prose-li:text-neutral-300
+        prose-hr:border-neutral-800
+      ">
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
           rehypePlugins={[rehypeHighlight]}
-          components={{
-            h1: ({ children }) => (
-              <h1 className="text-2xl font-bold text-white mt-0 mb-8 tracking-tight">
-                {children}
-              </h1>
-            ),
-            h2: ({ children }) => (
-              <h2 className="text-xl font-semibold text-white mt-12 mb-4 tracking-tight">
-                {children}
-              </h2>
-            ),
-            h3: ({ children }) => (
-              <h3 className="text-base font-semibold text-neutral-200 mt-8 mb-3 uppercase tracking-wide">
-                {children}
-              </h3>
-            ),
-            h4: ({ children }) => (
-              <h4 className="text-sm font-semibold text-neutral-300 mt-6 mb-2">
-                {children}
-              </h4>
-            ),
-            p: ({ children }) => (
-              <p className="text-neutral-300 leading-7 mb-5">{children}</p>
-            ),
-            strong: ({ children }) => (
-              <strong className="text-neutral-100 font-semibold">{children}</strong>
-            ),
-            hr: () => (
-              <hr className="border-0 border-t border-neutral-800 my-10" />
-            ),
-            ul: ({ children }) => (
-              <ul className="my-4 space-y-2 list-disc list-outside ml-5">
-                {children}
-              </ul>
-            ),
-            ol: ({ children }) => (
-              <ol className="my-4 space-y-2 list-decimal list-outside ml-5">
-                {children}
-              </ol>
-            ),
-            li: ({ children }) => (
-              <li className="text-neutral-300 leading-7 pl-1">{children}</li>
-            ),
-            blockquote: ({ children }) => (
-              <blockquote className="border-l-2 border-blue-500 pl-6 my-6 text-neutral-400 italic">
-                {children}
-              </blockquote>
-            ),
-            pre: ({ children }) => (
-              <pre className="bg-neutral-900 border border-neutral-800 rounded-lg p-4 my-6 overflow-x-auto">
-                {children}
-              </pre>
-            ),
-            code: ({ className, children }) => {
-              const isBlock = className?.includes('language-');
-              if (isBlock) {
-                return <code className={className}>{children}</code>;
-              }
-              return (
-                <code className="text-pink-400 bg-neutral-800/70 px-1.5 py-0.5 rounded text-sm">
-                  {children}
-                </code>
-              );
-            },
-            a: ({ href, children }) => (
-              <a
-                href={href}
-                className="text-blue-400 hover:underline"
-                target={href?.startsWith('http') ? '_blank' : undefined}
-                rel={href?.startsWith('http') ? 'noopener noreferrer' : undefined}
-              >
-                {children}
-              </a>
-            ),
-          }}
         >
           {document.content}
         </ReactMarkdown>

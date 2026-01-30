@@ -1,114 +1,61 @@
 import { NextRequest, NextResponse } from 'next/server';
+import fs from 'fs';
+import path from 'path';
 
-const GH_PAT = process.env.GH_PAT;
-const REPO_OWNER = 'obrunogonzaga';
-const REPO_NAME = 'life-os';
+const BRAIN_DIR = path.join(process.cwd(), 'brain');
 
-const typeToFolder: Record<string, string> = {
-  journal: 'journals',
-  concept: 'concepts',
-  decision: 'decisions',
-  note: 'notes',
-  reference: 'references',
-};
-
-function generateSlug(title: string): string {
-  return title
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '');
-}
-
-function generateFrontmatter(data: {
-  title: string;
-  date: string;
-  type: string;
-  tags: string[];
-}): string {
-  return `---
-title: "${data.title}"
-date: ${data.date}
-type: ${data.type}
-tags: [${data.tags.join(', ')}]
----`;
-}
-
-export async function POST(request: NextRequest) {
+export async function DELETE(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { title, type, tags, content, date } = body;
-
-    if (!title || !content) {
+    const { slug } = await request.json();
+    
+    if (!slug || typeof slug !== 'string') {
       return NextResponse.json(
-        { error: 'Title and content are required' },
+        { error: 'Slug is required' },
         { status: 400 }
       );
     }
 
-    if (!GH_PAT) {
+    // Sanitize slug to prevent directory traversal
+    const sanitizedSlug = slug.replace(/\.\./g, '').replace(/^\/+/, '');
+    const filePath = path.join(BRAIN_DIR, `${sanitizedSlug}.md`);
+
+    // Verify file is within BRAIN_DIR
+    const resolvedPath = path.resolve(filePath);
+    if (!resolvedPath.startsWith(path.resolve(BRAIN_DIR))) {
       return NextResponse.json(
-        { error: 'GitHub token not configured' },
-        { status: 500 }
+        { error: 'Invalid path' },
+        { status: 400 }
       );
     }
 
-    const folder = typeToFolder[type] || 'notes';
-    const slug = generateSlug(title);
-    const filePath = `brain/${folder}/${slug}.md`;
-    
-    const frontmatter = generateFrontmatter({
-      title,
-      date: date || new Date().toISOString().split('T')[0],
-      type,
-      tags: tags || [],
-    });
-
-    const fullContent = `${frontmatter}\n\n${content}`;
-
-    // Create file via GitHub API
-    const response = await fetch(
-      `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${filePath}`,
-      {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${GH_PAT}`,
-          'Content-Type': 'application/json',
-          Accept: 'application/vnd.github.v3+json',
-        },
-        body: JSON.stringify({
-          message: `📝 Add ${type}: ${title}`,
-          content: Buffer.from(fullContent).toString('base64'),
-          branch: 'main',
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      const error = await response.json();
-      console.error('GitHub API error:', error);
-      
-      if (response.status === 422) {
-        return NextResponse.json(
-          { error: 'A document with this name already exists' },
-          { status: 422 }
-        );
-      }
-      
+    if (!fs.existsSync(filePath)) {
       return NextResponse.json(
-        { error: 'Failed to create document' },
-        { status: response.status }
+        { error: 'Document not found' },
+        { status: 404 }
       );
     }
 
-    return NextResponse.json({
-      success: true,
-      slug: `${folder}/${slug}`,
-      message: 'Document created successfully',
-    });
+    // Delete the file
+    fs.unlinkSync(filePath);
+
+    // Clean up empty directories
+    const dir = path.dirname(filePath);
+    if (dir !== BRAIN_DIR) {
+      try {
+        const entries = fs.readdirSync(dir);
+        if (entries.length === 0) {
+          fs.rmdirSync(dir);
+        }
+      } catch {
+        // Ignore errors when cleaning up directories
+      }
+    }
+
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error creating document:', error);
+    console.error('Delete error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Failed to delete document' },
       { status: 500 }
     );
   }

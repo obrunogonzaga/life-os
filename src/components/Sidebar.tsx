@@ -47,17 +47,6 @@ export function Sidebar({ documents }: SidebarProps) {
         </Link>
       </div>
 
-      {/* New Document Button */}
-      <div className="p-2">
-        <Link
-          href="/new"
-          className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition-colors"
-        >
-          <span>+</span>
-          <span>New Document</span>
-        </Link>
-      </div>
-
       {/* Document List */}
       <nav className="flex-1 overflow-y-auto p-2">
         {typeOrder.map((type) => {
