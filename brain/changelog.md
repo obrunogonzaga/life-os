@@ -44,6 +44,7 @@ Histórico de mudanças do life-os.
 - [ ] Busca de documentos
 - [ ] Links internos clicáveis ([[doc]])
 - [ ] Domínio próprio
+- [ ] Suporte a SSL
 
 ### Futuro
 - [ ] Graph view (conexões entre docs)
