@@ -1,5 +1,7 @@
 'use client';
 
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
@@ -18,24 +20,87 @@ const typeColors: Record<string, string> = {
 };
 
 export function MarkdownViewer({ document }: MarkdownViewerProps) {
+  const router = useRouter();
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const typeColor = typeColors[document.type] || typeColors.note;
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const response = await fetch('/api/documents', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug: document.slug }),
+      });
+
+      if (response.ok) {
+        router.push('/');
+        router.refresh();
+      } else {
+        const data = await response.json();
+        alert(`Erro ao deletar: ${data.error}`);
+      }
+    } catch (error) {
+      alert('Erro ao deletar documento');
+    } finally {
+      setIsDeleting(false);
+      setShowConfirm(false);
+    }
+  };
 
   return (
     <article className="max-w-3xl mx-auto">
       {/* Header */}
       <header className="mb-8 pb-6 border-b border-neutral-800">
-        <div className="flex items-center gap-3 mb-3">
-          <span className={`px-2 py-0.5 text-xs font-medium rounded border ${typeColor}`}>
-            {document.type}
-          </span>
-          {document.date && (
-            <time className="text-sm text-neutral-500">
-              {new Date(document.date).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-              })}
-            </time>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <span className={`px-2 py-0.5 text-xs font-medium rounded border ${typeColor}`}>
+              {document.type}
+            </span>
+            {document.date && (
+              <time className="text-sm text-neutral-500">
+                {new Date(document.date).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                })}
+              </time>
+            )}
+          </div>
+          
+          {/* Delete Button */}
+          {!showConfirm ? (
+            <button
+              onClick={() => setShowConfirm(true)}
+              className="p-2 text-neutral-500 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors"
+              title="Deletar documento"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 6h18" />
+                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                <line x1="10" y1="11" x2="10" y2="17" />
+                <line x1="14" y1="11" x2="14" y2="17" />
+              </svg>
+            </button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-neutral-400">Deletar?</span>
+              <button
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="px-3 py-1 text-sm bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded transition-colors disabled:opacity-50"
+              >
+                {isDeleting ? '...' : 'Sim'}
+              </button>
+              <button
+                onClick={() => setShowConfirm(false)}
+                className="px-3 py-1 text-sm bg-neutral-800 text-neutral-400 hover:bg-neutral-700 rounded transition-colors"
+              >
+                Não
+              </button>
+            </div>
           )}
         </div>
         <h1 className="text-3xl font-bold text-white">{document.title}</h1>
