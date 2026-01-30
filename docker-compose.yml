@@ -3,6 +3,8 @@ services:
     image: ghcr.io/obrunogonzaga/life-os:${TAG:-latest}
     container_name: life-os${SUFFIX:-}
     restart: unless-stopped
+    environment:
+      - GH_PAT=${GH_PAT:-}
     networks:
       - proxy
     labels:

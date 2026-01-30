@@ -61,12 +61,16 @@ jobs:
     steps:
       - name: Deploy to Hetzner
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
         with:
           host: ${{ secrets.HETZNER_HOST }}
           username: root
           key: ${{ secrets.HETZNER_SSH_KEY }}
+          envs: GH_PAT
           script: |
             cd /opt/stacks/life-os
+            export GH_PAT="${GH_PAT}"
             docker compose pull
             docker compose up -d
 
