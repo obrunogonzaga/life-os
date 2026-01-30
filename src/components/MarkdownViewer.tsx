@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
@@ -36,10 +37,16 @@ export function MarkdownViewer({ document }: MarkdownViewerProps) {
     <article className="max-w-3xl mx-auto py-10 px-8">
       {/* Header */}
       <header className="mb-8">
-        <div className="flex items-center gap-3 mb-4">
+        <div className="flex items-center justify-between mb-4">
           <span className={`px-2.5 py-1 text-xs font-medium rounded-md border ${typeColor}`}>
             {document.type}
           </span>
+          <Link
+            href={`/edit/${document.slug}`}
+            className="px-3 py-1.5 text-sm bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded-md transition-colors"
+          >
+            ✏️ Edit
+          </Link>
         </div>
         <h1 className="text-3xl font-bold text-white tracking-tight">{document.title}</h1>
         {document.date && (
@@ -67,71 +74,58 @@ export function MarkdownViewer({ document }: MarkdownViewerProps) {
           remarkPlugins={[remarkGfm]}
           rehypePlugins={[rehypeHighlight]}
           components={{
-            // H1 - Main title (usually skipped, shown in header)
             h1: ({ children }) => (
               <h1 className="text-2xl font-bold text-white mt-0 mb-8 tracking-tight">
                 {children}
               </h1>
             ),
-            // H2 - Major sections (time entries)
             h2: ({ children }) => (
               <h2 className="text-xl font-semibold text-white mt-12 mb-4 tracking-tight">
                 {children}
               </h2>
             ),
-            // H3 - Subsections (Key highlights, etc)
             h3: ({ children }) => (
               <h3 className="text-base font-semibold text-neutral-200 mt-8 mb-3 uppercase tracking-wide">
                 {children}
               </h3>
             ),
-            // H4 - Minor subsections
             h4: ({ children }) => (
               <h4 className="text-sm font-semibold text-neutral-300 mt-6 mb-2">
                 {children}
               </h4>
             ),
-            // Paragraphs
             p: ({ children }) => (
               <p className="text-neutral-300 leading-7 mb-5">{children}</p>
             ),
-            // Strong/Bold
             strong: ({ children }) => (
               <strong className="text-neutral-100 font-semibold">{children}</strong>
             ),
-            // Horizontal rules - visual separator
             hr: () => (
               <hr className="border-0 border-t border-neutral-800 my-10" />
             ),
-            // Unordered lists
             ul: ({ children }) => (
               <ul className="my-4 space-y-2 list-disc list-outside ml-5">
                 {children}
               </ul>
             ),
-            // Ordered lists
             ol: ({ children }) => (
               <ol className="my-4 space-y-2 list-decimal list-outside ml-5">
                 {children}
               </ol>
             ),
-            // List items
             li: ({ children }) => (
               <li className="text-neutral-300 leading-7 pl-1">{children}</li>
             ),
-            // Blockquotes
             blockquote: ({ children }) => (
               <blockquote className="border-l-2 border-blue-500 pl-6 my-6 text-neutral-400 italic">
                 {children}
               </blockquote>
             ),
-            // Code blocks
             pre: ({ children }) => (
               <pre className="bg-neutral-900 border border-neutral-800 rounded-lg p-4 my-6 overflow-x-auto">
                 {children}
               </pre>
             ),
-            // Inline code
             code: ({ className, children }) => {
               const isBlock = className?.includes('language-');
               if (isBlock) {
@@ -143,7 +137,6 @@ export function MarkdownViewer({ document }: MarkdownViewerProps) {
                 </code>
               );
             },
-            // Links
             a: ({ href, children }) => (
               <a
                 href={href}
