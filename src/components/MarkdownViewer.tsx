@@ -20,7 +20,6 @@ const typeColors: Record<string, string> = {
 export function MarkdownViewer({ document }: MarkdownViewerProps) {
   const typeColor = typeColors[document.type] || typeColors.note;
 
-  // Format date nicely
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '';
     const date = new Date(dateStr);
@@ -34,17 +33,17 @@ export function MarkdownViewer({ document }: MarkdownViewerProps) {
   };
 
   return (
-    <article className="max-w-3xl mx-auto py-8 px-6">
+    <article className="max-w-3xl mx-auto py-10 px-8">
       {/* Header */}
-      <header className="mb-10">
+      <header className="mb-8">
         <div className="flex items-center gap-3 mb-4">
           <span className={`px-2.5 py-1 text-xs font-medium rounded-md border ${typeColor}`}>
             {document.type}
           </span>
         </div>
-        <h1 className="text-3xl font-bold text-white mb-2">{document.title}</h1>
+        <h1 className="text-3xl font-bold text-white tracking-tight">{document.title}</h1>
         {document.date && (
-          <time className="text-base text-neutral-400">
+          <time className="block mt-2 text-base text-neutral-400">
             {formatDate(document.date)}
           </time>
         )}
@@ -62,70 +61,98 @@ export function MarkdownViewer({ document }: MarkdownViewerProps) {
         )}
       </header>
 
-      {/* Divider */}
-      <hr className="border-neutral-800 mb-10" />
-
       {/* Content */}
-      <div className="
-        prose prose-invert prose-neutral max-w-none
-        
-        /* Headings - more spacing */
-        prose-headings:font-semibold prose-headings:tracking-tight
-        prose-h1:text-2xl prose-h1:mt-12 prose-h1:mb-6
-        prose-h2:text-xl prose-h2:mt-10 prose-h2:mb-4 prose-h2:text-neutral-100
-        prose-h3:text-lg prose-h3:mt-8 prose-h3:mb-3 prose-h3:text-neutral-200
-        prose-h4:text-base prose-h4:mt-6 prose-h4:mb-2 prose-h4:text-neutral-300
-        
-        /* Paragraphs - better line height and spacing */
-        prose-p:text-neutral-300 prose-p:leading-7 prose-p:mb-6
-        
-        /* Links */
-        prose-a:text-blue-400 prose-a:no-underline hover:prose-a:underline
-        
-        /* Strong/Bold - stand out more */
-        prose-strong:text-white prose-strong:font-semibold
-        
-        /* Code */
-        prose-code:text-pink-400 prose-code:bg-neutral-800/70 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:font-normal
-        prose-code:before:content-none prose-code:after:content-none
-        prose-pre:bg-neutral-900 prose-pre:border prose-pre:border-neutral-800 prose-pre:rounded-lg
-        
-        /* Blockquotes */
-        prose-blockquote:border-l-2 prose-blockquote:border-blue-500 prose-blockquote:text-neutral-400 prose-blockquote:pl-6 prose-blockquote:italic prose-blockquote:my-8
-        
-        /* Lists - better spacing */
-        prose-ul:my-6 prose-ul:space-y-2
-        prose-ol:my-6 prose-ol:space-y-2
-        prose-li:text-neutral-300 prose-li:leading-7
-        prose-li:marker:text-neutral-500
-        
-        /* Horizontal rules */
-        prose-hr:border-neutral-800 prose-hr:my-10
-        
-        /* Tables */
-        prose-table:my-8
-        prose-th:text-neutral-200 prose-th:font-semibold prose-th:border-neutral-700 prose-th:px-4 prose-th:py-3
-        prose-td:text-neutral-300 prose-td:border-neutral-800 prose-td:px-4 prose-td:py-3
-      ">
+      <div className="document-content">
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
           rehypePlugins={[rehypeHighlight]}
           components={{
-            // Custom rendering for horizontal rules (entry separators)
-            hr: () => (
-              <div className="my-12 flex items-center gap-4">
-                <div className="flex-1 border-t border-neutral-800"></div>
-                <span className="text-neutral-600 text-sm">•••</span>
-                <div className="flex-1 border-t border-neutral-800"></div>
-              </div>
+            // H1 - Main title (usually skipped, shown in header)
+            h1: ({ children }) => (
+              <h1 className="text-2xl font-bold text-white mt-0 mb-8 tracking-tight">
+                {children}
+              </h1>
             ),
-            // Better paragraph handling
+            // H2 - Major sections (time entries)
+            h2: ({ children }) => (
+              <h2 className="text-xl font-semibold text-white mt-12 mb-4 tracking-tight">
+                {children}
+              </h2>
+            ),
+            // H3 - Subsections (Key highlights, etc)
+            h3: ({ children }) => (
+              <h3 className="text-base font-semibold text-neutral-200 mt-8 mb-3 uppercase tracking-wide">
+                {children}
+              </h3>
+            ),
+            // H4 - Minor subsections
+            h4: ({ children }) => (
+              <h4 className="text-sm font-semibold text-neutral-300 mt-6 mb-2">
+                {children}
+              </h4>
+            ),
+            // Paragraphs
             p: ({ children }) => (
               <p className="text-neutral-300 leading-7 mb-5">{children}</p>
             ),
-            // Style strong text as labels
+            // Strong/Bold
             strong: ({ children }) => (
               <strong className="text-neutral-100 font-semibold">{children}</strong>
+            ),
+            // Horizontal rules - visual separator
+            hr: () => (
+              <hr className="border-0 border-t border-neutral-800 my-10" />
+            ),
+            // Unordered lists
+            ul: ({ children }) => (
+              <ul className="my-4 space-y-2 list-disc list-outside ml-5">
+                {children}
+              </ul>
+            ),
+            // Ordered lists
+            ol: ({ children }) => (
+              <ol className="my-4 space-y-2 list-decimal list-outside ml-5">
+                {children}
+              </ol>
+            ),
+            // List items
+            li: ({ children }) => (
+              <li className="text-neutral-300 leading-7 pl-1">{children}</li>
+            ),
+            // Blockquotes
+            blockquote: ({ children }) => (
+              <blockquote className="border-l-2 border-blue-500 pl-6 my-6 text-neutral-400 italic">
+                {children}
+              </blockquote>
+            ),
+            // Code blocks
+            pre: ({ children }) => (
+              <pre className="bg-neutral-900 border border-neutral-800 rounded-lg p-4 my-6 overflow-x-auto">
+                {children}
+              </pre>
+            ),
+            // Inline code
+            code: ({ className, children }) => {
+              const isBlock = className?.includes('language-');
+              if (isBlock) {
+                return <code className={className}>{children}</code>;
+              }
+              return (
+                <code className="text-pink-400 bg-neutral-800/70 px-1.5 py-0.5 rounded text-sm">
+                  {children}
+                </code>
+              );
+            },
+            // Links
+            a: ({ href, children }) => (
+              <a
+                href={href}
+                className="text-blue-400 hover:underline"
+                target={href?.startsWith('http') ? '_blank' : undefined}
+                rel={href?.startsWith('http') ? 'noopener noreferrer' : undefined}
+              >
+                {children}
+              </a>
             ),
           }}
         >
