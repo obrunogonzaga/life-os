@@ -4,6 +4,9 @@ import './globals.css';
 import { Sidebar } from '@/components/Sidebar';
 import { getAllDocuments } from '@/lib/documents';
 
+// Force dynamic rendering so sidebar updates after deletions
+export const dynamic = 'force-dynamic';
+
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {

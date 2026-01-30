@@ -1,16 +1,12 @@
 import { notFound } from 'next/navigation';
-import { getDocumentBySlug, getAllDocuments } from '@/lib/documents';
+import { getDocumentBySlug } from '@/lib/documents';
 import { MarkdownViewer } from '@/components/MarkdownViewer';
+
+// Force dynamic rendering (no SSG) so deletions reflect immediately
+export const dynamic = 'force-dynamic';
 
 interface PageProps {
   params: Promise<{ slug: string[] }>;
-}
-
-export async function generateStaticParams() {
-  const documents = getAllDocuments();
-  return documents.map((doc) => ({
-    slug: doc.slug.split('/'),
-  }));
 }
 
 export async function generateMetadata({ params }: PageProps) {
