@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
@@ -69,22 +70,36 @@ export function MarkdownViewer({ document }: MarkdownViewerProps) {
             )}
           </div>
           
-          {/* Delete Button */}
-          {!showConfirm ? (
-            <button
-              onClick={() => setShowConfirm(true)}
-              className="p-2 text-neutral-500 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors"
-              title="Deletar documento"
+          {/* Action Buttons */}
+          <div className="flex items-center gap-1">
+            {/* Edit Button */}
+            <Link
+              href={`/edit/${document.slug}`}
+              className="p-2 text-neutral-500 hover:text-blue-500 hover:bg-blue-500/10 rounded transition-colors"
+              title="Editar documento"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 6h18" />
-                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                <line x1="10" y1="11" x2="10" y2="17" />
-                <line x1="14" y1="11" x2="14" y2="17" />
+                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                <path d="m15 5 4 4" />
               </svg>
-            </button>
-          ) : (
+            </Link>
+            
+            {/* Delete Button */}
+            {!showConfirm ? (
+              <button
+                onClick={() => setShowConfirm(true)}
+                className="p-2 text-neutral-500 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors"
+                title="Deletar documento"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 6h18" />
+                  <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                  <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                  <line x1="10" y1="11" x2="10" y2="17" />
+                  <line x1="14" y1="11" x2="14" y2="17" />
+                </svg>
+              </button>
+            ) : (
             <div className="flex items-center gap-2">
               <span className="text-sm text-neutral-400">Deletar?</span>
               <button
