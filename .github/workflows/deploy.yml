@@ -67,34 +67,38 @@ jobs:
     if: github.event_name == 'pull_request' && github.event.action != 'closed'
     needs: build
     runs-on: ubuntu-latest
+    env:
+      PR_NUM: ${{ github.event.pull_request.number }}
     steps:
-      - uses: actions/checkout@v4
       - name: Deploy Preview
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          PR_NUM: ${{ github.event.pull_request.number }}
         with:
           host: ${{ secrets.HETZNER_HOST }}
           username: root
           key: ${{ secrets.HETZNER_SSH_KEY }}
+          envs: PR_NUM
           script: |
-            mkdir -p /opt/stacks/life-os-pr${{ github.event.pull_request.number }}
-            cd /opt/stacks/life-os-pr${{ github.event.pull_request.number }}
-            cat > docker-compose.yml << 'COMPOSE'
+            mkdir -p /opt/stacks/life-os-pr${PR_NUM}
+            cd /opt/stacks/life-os-pr${PR_NUM}
+            cat > docker-compose.yml << EOF
             services:
               life-os:
-                image: ghcr.io/${{ github.repository }}:pr-${{ github.event.pull_request.number }}
-                container_name: life-os-pr${{ github.event.pull_request.number }}
+                image: ghcr.io/obrunogonzaga/life-os:pr-${PR_NUM}
+                container_name: life-os-pr${PR_NUM}
                 restart: unless-stopped
                 networks:
                   - proxy
                 labels:
-                  - "traefik.enable=true"
-                  - "traefik.http.routers.life-os-pr${{ github.event.pull_request.number }}.rule=Host(\`life-os-pr${{ github.event.pull_request.number }}.89.167.22.57.nip.io\`)"
-                  - "traefik.http.routers.life-os-pr${{ github.event.pull_request.number }}.entrypoints=web"
-                  - "traefik.http.services.life-os-pr${{ github.event.pull_request.number }}.loadbalancer.server.port=3000"
+                  - traefik.enable=true
+                  - traefik.http.routers.life-os-pr${PR_NUM}.rule=Host(\`life-os-pr${PR_NUM}.89.167.22.57.nip.io\`)
+                  - traefik.http.routers.life-os-pr${PR_NUM}.entrypoints=web
+                  - traefik.http.services.life-os-pr${PR_NUM}.loadbalancer.server.port=3000
             networks:
               proxy:
                 external: true
-            COMPOSE
+            EOF
             docker compose pull
             docker compose up -d
       
@@ -106,7 +110,7 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '🚀 Preview deployed: http://life-os-pr${{ github.event.pull_request.number }}.89.167.22.57.nip.io'
+              body: '🚀 Preview: http://life-os-pr' + context.issue.number + '.89.167.22.57.nip.io'
             })
 
   cleanup-preview:
@@ -115,10 +119,13 @@ jobs:
     steps:
       - name: Remove Preview
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          PR_NUM: ${{ github.event.pull_request.number }}
         with:
           host: ${{ secrets.HETZNER_HOST }}
           username: root
           key: ${{ secrets.HETZNER_SSH_KEY }}
+          envs: PR_NUM
           script: |
-            cd /opt/stacks/life-os-pr${{ github.event.pull_request.number }} 2>/dev/null && docker compose down --rmi all || true
-            rm -rf /opt/stacks/life-os-pr${{ github.event.pull_request.number }}
+            cd /opt/stacks/life-os-pr${PR_NUM} 2>/dev/null && docker compose down --rmi all || true
+            rm -rf /opt/stacks/life-os-pr${PR_NUM}
