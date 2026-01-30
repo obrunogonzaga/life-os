@@ -1,0 +1,124 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build:
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      tag: ${{ steps.meta.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix=
+      
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  deploy-prod:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to Hetzner
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HETZNER_HOST }}
+          username: root
+          key: ${{ secrets.HETZNER_SSH_KEY }}
+          script: |
+            cd /opt/stacks/life-os
+            docker compose pull
+            docker compose up -d
+
+  deploy-preview:
+    if: github.event_name == 'pull_request' && github.event.action != 'closed'
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy Preview
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HETZNER_HOST }}
+          username: root
+          key: ${{ secrets.HETZNER_SSH_KEY }}
+          script: |
+            mkdir -p /opt/stacks/life-os-pr${{ github.event.pull_request.number }}
+            cd /opt/stacks/life-os-pr${{ github.event.pull_request.number }}
+            cat > docker-compose.yml << 'COMPOSE'
+            services:
+              life-os:
+                image: ghcr.io/${{ github.repository }}:pr-${{ github.event.pull_request.number }}
+                container_name: life-os-pr${{ github.event.pull_request.number }}
+                restart: unless-stopped
+                networks:
+                  - proxy
+                labels:
+                  - "traefik.enable=true"
+                  - "traefik.http.routers.life-os-pr${{ github.event.pull_request.number }}.rule=Host(\`life-os-pr${{ github.event.pull_request.number }}.89.167.22.57.nip.io\`)"
+                  - "traefik.http.routers.life-os-pr${{ github.event.pull_request.number }}.entrypoints=web"
+                  - "traefik.http.services.life-os-pr${{ github.event.pull_request.number }}.loadbalancer.server.port=3000"
+            networks:
+              proxy:
+                external: true
+            COMPOSE
+            docker compose pull
+            docker compose up -d
+      
+      - name: Comment PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '🚀 Preview deployed: http://life-os-pr${{ github.event.pull_request.number }}.89.167.22.57.nip.io'
+            })
+
+  cleanup-preview:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Remove Preview
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HETZNER_HOST }}
+          username: root
+          key: ${{ secrets.HETZNER_SSH_KEY }}
+          script: |
+            cd /opt/stacks/life-os-pr${{ github.event.pull_request.number }} 2>/dev/null && docker compose down --rmi all || true
+            rm -rf /opt/stacks/life-os-pr${{ github.event.pull_request.number }}
