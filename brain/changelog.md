@@ -47,5 +47,5 @@ Histórico de mudanças do life-os.
 
 ### Futuro
 - [ ] Graph view (conexões entre docs)
-- [ ] Editor com preview lado a lado
+- [X] Editor com preview lado a lado
 - [ ] Mobile-friendly improvements
