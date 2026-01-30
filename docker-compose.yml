@@ -1,0 +1,16 @@
+services:
+  life-os:
+    image: ghcr.io/obrunogonzaga/life-os:${TAG:-latest}
+    container_name: life-os${SUFFIX:-}
+    restart: unless-stopped
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.life-os${SUFFIX:-}.rule=Host(\`${HOST:-life-os.89.167.22.57.nip.io}\`)"
+      - "traefik.http.routers.life-os${SUFFIX:-}.entrypoints=web"
+      - "traefik.http.services.life-os${SUFFIX:-}.loadbalancer.server.port=3000"
+
+networks:
+  proxy:
+    external: true

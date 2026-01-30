@@ -1,0 +1,125 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build:
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix=
+      
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy-prod:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to Hetzner
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HETZNER_HOST }}
+          username: root
+          key: ${{ secrets.HETZNER_SSH_KEY }}
+          script: |
+            cd /opt/stacks/life-os
+            docker compose pull
+            docker compose up -d
+
+  deploy-preview:
+    if: github.event_name == 'pull_request' && github.event.action != 'closed'
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy Preview
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          PR_NUM: ${{ github.event.pull_request.number }}
+        with:
+          host: ${{ secrets.HETZNER_HOST }}
+          username: root
+          key: ${{ secrets.HETZNER_SSH_KEY }}
+          envs: PR_NUM
+          script: |
+            mkdir -p /opt/stacks/life-os-pr${PR_NUM}
+            cd /opt/stacks/life-os-pr${PR_NUM}
+            cat > docker-compose.yml << EOF
+            services:
+              life-os:
+                image: ghcr.io/obrunogonzaga/life-os:pr-${PR_NUM}
+                container_name: life-os-pr${PR_NUM}
+                restart: unless-stopped
+                networks:
+                  - proxy
+                labels:
+                  - traefik.enable=true
+                  - traefik.http.routers.life-os-pr${PR_NUM}.rule=Host(\`life-os-pr${PR_NUM}.89.167.22.57.nip.io\`)
+                  - traefik.http.routers.life-os-pr${PR_NUM}.entrypoints=web
+                  - traefik.http.services.life-os-pr${PR_NUM}.loadbalancer.server.port=3000
+            networks:
+              proxy:
+                external: true
+            EOF
+            docker compose pull
+            docker compose up -d
+
+  cleanup-preview:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Remove Preview
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          PR_NUM: ${{ github.event.pull_request.number }}
+        with:
+          host: ${{ secrets.HETZNER_HOST }}
+          username: root
+          key: ${{ secrets.HETZNER_SSH_KEY }}
+          envs: PR_NUM
+          script: |
+            cd /opt/stacks/life-os-pr${PR_NUM} 2>/dev/null && docker compose down --rmi all || true
+            rm -rf /opt/stacks/life-os-pr${PR_NUM}
