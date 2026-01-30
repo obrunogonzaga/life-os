@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import fs from 'fs';
+import path from 'path';
 
-const GH_PAT = process.env.GH_PAT;
-const REPO_OWNER = 'obrunogonzaga';
-const REPO_NAME = 'life-os';
+const BRAIN_DIR = path.join(process.cwd(), 'brain');
 
 function generateFrontmatter(data: {
   title: string;
@@ -10,11 +10,12 @@ function generateFrontmatter(data: {
   type: string;
   tags: string[];
 }): string {
+  const sanitizedTags = data.tags.map(t => t.replace(/^#/, '').trim()).filter(Boolean);
   return `---
 title: "${data.title}"
 date: ${data.date}
 type: ${data.type}
-tags: [${data.tags.join(', ')}]
+tags: [${sanitizedTags.join(', ')}]
 ---`;
 }
 
@@ -55,33 +56,30 @@ export async function GET(
 ) {
   try {
     const { slug } = await params;
-    const filePath = `brain/${slug.join('/')}.md`;
-    
-    const response = await fetch(
-      `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${filePath}`,
-      {
-        headers: {
-          Authorization: GH_PAT ? `Bearer ${GH_PAT}` : '',
-          Accept: 'application/vnd.github.v3+json',
-        },
-      }
-    );
+    const filePath = path.join(BRAIN_DIR, `${slug.join('/')}.md`);
 
-    if (!response.ok) {
+    // Verify file is within BRAIN_DIR
+    const resolvedPath = path.resolve(filePath);
+    if (!resolvedPath.startsWith(path.resolve(BRAIN_DIR))) {
+      return NextResponse.json(
+        { error: 'Invalid path' },
+        { status: 400 }
+      );
+    }
+
+    if (!fs.existsSync(filePath)) {
       return NextResponse.json(
         { error: 'Document not found' },
         { status: 404 }
       );
     }
 
-    const data = await response.json();
-    const content = Buffer.from(data.content, 'base64').toString('utf-8');
+    const content = fs.readFileSync(filePath, 'utf-8');
     const parsed = parseFrontmatter(content);
     
     return NextResponse.json({
       ...parsed.metadata,
       content: parsed.content,
-      sha: data.sha,
     });
   } catch (error) {
     console.error('Error fetching document:', error);
@@ -109,35 +107,24 @@ export async function PUT(
       );
     }
 
-    if (!GH_PAT) {
+    const filePath = path.join(BRAIN_DIR, `${slug.join('/')}.md`);
+
+    // Verify file is within BRAIN_DIR
+    const resolvedPath = path.resolve(filePath);
+    if (!resolvedPath.startsWith(path.resolve(BRAIN_DIR))) {
       return NextResponse.json(
-        { error: 'GitHub token not configured' },
-        { status: 500 }
+        { error: 'Invalid path' },
+        { status: 400 }
       );
     }
 
-    const filePath = `brain/${slug.join('/')}.md`;
-    
-    // First get the current file to get SHA
-    const getResponse = await fetch(
-      `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${filePath}`,
-      {
-        headers: {
-          Authorization: `Bearer ${GH_PAT}`,
-          Accept: 'application/vnd.github.v3+json',
-        },
-      }
-    );
-
-    if (!getResponse.ok) {
+    if (!fs.existsSync(filePath)) {
       return NextResponse.json(
         { error: 'Document not found' },
         { status: 404 }
       );
     }
 
-    const currentFile = await getResponse.json();
-    
     const frontmatter = generateFrontmatter({
       title,
       date: date || new Date().toISOString().split('T')[0],
@@ -147,33 +134,8 @@ export async function PUT(
 
     const fullContent = `${frontmatter}\n\n${content}`;
 
-    // Update file via GitHub API
-    const updateResponse = await fetch(
-      `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${filePath}`,
-      {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${GH_PAT}`,
-          'Content-Type': 'application/json',
-          Accept: 'application/vnd.github.v3+json',
-        },
-        body: JSON.stringify({
-          message: `📝 Update ${type}: ${title}`,
-          content: Buffer.from(fullContent).toString('base64'),
-          sha: currentFile.sha,
-          branch: 'main',
-        }),
-      }
-    );
-
-    if (!updateResponse.ok) {
-      const error = await updateResponse.json();
-      console.error('GitHub API error:', error);
-      return NextResponse.json(
-        { error: 'Failed to update document' },
-        { status: updateResponse.status }
-      );
-    }
+    // Write file
+    fs.writeFileSync(filePath, fullContent, 'utf-8');
 
     return NextResponse.json({
       success: true,
