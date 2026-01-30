@@ -117,6 +117,7 @@ export function MarkdownViewer({ document }: MarkdownViewerProps) {
               </button>
             </div>
           )}
+          </div>
         </div>
         <h1 className="text-3xl font-bold text-neutral-900 dark:text-white">{document.title}</h1>
         {document.tags.length > 0 && (
