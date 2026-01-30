@@ -5,4 +5,4 @@ type: note
 tags: [entrevista]
 ---
 
-Candidato: Igor Gonçalves
+Candidato: Igor Gonçalves.
