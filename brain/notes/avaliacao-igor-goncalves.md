@@ -27,7 +27,7 @@ tags: [entrevista, picpay, avaliacao, candidato]
 
 ### 1. Microsserviços vs Monolito
 
-**Pergunta:** Problemas e benefícios de migrar de monolito para microsserviços.
+**Pergunta:** Problemas e benefícios de migrar de monólito para microserviços.
 
 **Resposta do Igor:**
 - ✅ Identificou corretamente que complexidade aumenta com microsserviços (banco separado, comunicação)
