@@ -3,10 +3,10 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { DocumentMeta, DocumentType } from '@/lib/types';
-import { ThemeToggle } from './ThemeToggle';
 
 interface SidebarProps {
   documents: DocumentMeta[];
+  basePath?: string;
 }
 
 const typeIcons: Record<DocumentType, string> = {
@@ -25,7 +25,7 @@ const typeLabels: Record<DocumentType, string> = {
   reference: 'References',
 };
 
-export function Sidebar({ documents }: SidebarProps) {
+export function Sidebar({ documents, basePath = '' }: SidebarProps) {
   const pathname = usePathname();
   
   // Group documents by type
@@ -39,14 +39,24 @@ export function Sidebar({ documents }: SidebarProps) {
   const typeOrder: DocumentType[] = ['journal', 'concept', 'decision', 'note', 'reference'];
 
   return (
-    <aside className="w-64 h-screen bg-neutral-100 dark:bg-neutral-900 border-r border-neutral-200 dark:border-neutral-800 flex flex-col transition-colors">
+    <aside className="w-64 h-full bg-neutral-100 dark:bg-neutral-900 border-r border-neutral-200 dark:border-neutral-800 flex flex-col transition-colors">
       {/* Header */}
-      <div className="p-4 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2 text-neutral-900 dark:text-white font-semibold">
+      <div className="p-4 border-b border-neutral-200 dark:border-neutral-800">
+        <div className="flex items-center gap-2 text-neutral-900 dark:text-white font-semibold">
           <span className="text-xl">🧠</span>
-          <span>life-os</span>
+          <span>Memory</span>
+        </div>
+        <p className="text-xs text-neutral-500 mt-1">{documents.length} documents</p>
+      </div>
+
+      {/* Actions */}
+      <div className="p-2 border-b border-neutral-200 dark:border-neutral-800">
+        <Link
+          href={`${basePath}/new`}
+          className="flex items-center justify-center gap-2 w-full px-3 py-2 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+        >
+          <span>+</span> New Document
         </Link>
-        <ThemeToggle />
       </div>
 
       {/* Document List */}
@@ -62,7 +72,7 @@ export function Sidebar({ documents }: SidebarProps) {
               </h3>
               <ul className="mt-1 space-y-0.5">
                 {docs.map((doc) => {
-                  const href = `/doc/${doc.slug}`;
+                  const href = `${basePath}/doc/${doc.slug}`;
                   const isActive = pathname === href;
 
                   return (
@@ -87,11 +97,6 @@ export function Sidebar({ documents }: SidebarProps) {
           );
         })}
       </nav>
-
-      {/* Footer */}
-      <div className="p-4 border-t border-neutral-200 dark:border-neutral-800 text-xs text-neutral-500">
-        {documents.length} documents
-      </div>
     </aside>
   );
 }

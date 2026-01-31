@@ -1,11 +1,10 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
-import { Sidebar } from '@/components/Sidebar';
 import { ThemeProvider } from '@/components/ThemeProvider';
-import { getAllDocuments } from '@/lib/documents';
+import { TopNav } from '@/components/TopNav';
 
-// Force dynamic rendering so sidebar updates after deletions
+// Force dynamic rendering
 export const dynamic = 'force-dynamic';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -20,14 +19,12 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const documents = getAllDocuments();
-
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
       <body className={`${inter.className} bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 antialiased transition-colors`}>
         <ThemeProvider>
-          <div className="flex min-h-screen">
-            <Sidebar documents={documents} />
+          <div className="flex flex-col min-h-screen">
+            <TopNav />
             <main className="flex-1 overflow-auto">
               {children}
             </main>
