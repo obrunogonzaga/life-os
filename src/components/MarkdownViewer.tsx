@@ -10,6 +10,7 @@ import { Document } from '@/lib/types';
 
 interface MarkdownViewerProps {
   document: Document;
+  basePath?: string;
 }
 
 const typeColors: Record<string, string> = {
@@ -20,7 +21,7 @@ const typeColors: Record<string, string> = {
   reference: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/30',
 };
 
-export function MarkdownViewer({ document }: MarkdownViewerProps) {
+export function MarkdownViewer({ document, basePath = '' }: MarkdownViewerProps) {
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -36,7 +37,7 @@ export function MarkdownViewer({ document }: MarkdownViewerProps) {
       });
 
       if (response.ok) {
-        router.push('/');
+        router.push(basePath || '/memory');
         router.refresh();
       } else {
         const data = await response.json();
@@ -74,7 +75,7 @@ export function MarkdownViewer({ document }: MarkdownViewerProps) {
           <div className="flex items-center gap-1">
             {/* Edit Button */}
             <Link
-              href={`/edit/${document.slug}`}
+              href={`${basePath}/edit/${document.slug}`}
               className="p-2 text-neutral-500 hover:text-blue-500 hover:bg-blue-500/10 rounded transition-colors"
               title="Editar documento"
             >
