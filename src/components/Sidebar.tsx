@@ -41,12 +41,27 @@ export function Sidebar({ documents }: SidebarProps) {
   return (
     <aside className="w-64 h-screen bg-neutral-100 dark:bg-neutral-900 border-r border-neutral-200 dark:border-neutral-800 flex flex-col transition-colors">
       {/* Header */}
-      <div className="p-4 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2 text-neutral-900 dark:text-white font-semibold">
-          <span className="text-xl">🧠</span>
-          <span>life-os</span>
+      <div className="p-4 border-b border-neutral-200 dark:border-neutral-800">
+        <div className="flex items-center justify-between mb-3">
+          <Link href="/" className="flex items-center gap-2 text-neutral-900 dark:text-white font-semibold">
+            <span className="text-xl">🧠</span>
+            <span>life-os</span>
+          </Link>
+          <ThemeToggle />
+        </div>
+        <Link
+          href="/canvas"
+          className={`
+            flex items-center gap-2 px-2 py-1.5 rounded text-sm font-medium transition-colors
+            ${pathname === '/canvas'
+              ? 'bg-yellow-500/15 text-yellow-700 dark:text-yellow-400'
+              : 'text-neutral-600 dark:text-neutral-400 hover:text-yellow-700 dark:hover:text-yellow-400 hover:bg-yellow-500/10'
+            }
+          `}
+        >
+          <span>📊</span>
+          <span>Canvas</span>
         </Link>
-        <ThemeToggle />
       </div>
 
       {/* Document List */}
