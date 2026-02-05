@@ -49,7 +49,8 @@ db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)').run('spl
 
 // === MARÇO 2026 ===
 const mar2026 = db.prepare('INSERT OR IGNORE INTO months (year, month, label) VALUES (?, ?, ?)').run(2026, 3, 'Março 2026');
-const marId = mar2026.lastInsertRowid || db.prepare('SELECT id FROM months WHERE year = 2026 AND month = 3').get()?.id;
+const existingMonth = db.prepare('SELECT id FROM months WHERE year = 2026 AND month = 3').get() as { id: number } | undefined;
+const marId = mar2026.lastInsertRowid || existingMonth?.id;
 
 const marchTransactions = [
   // ITAÚ BLACK (cartão 1721)
