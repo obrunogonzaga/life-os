@@ -14,14 +14,14 @@ const faturas: FaturaMonth[] = [
   {
     month: '2026-03',
     label: 'Março 2026',
-    file: '/faturas-2026-03.html',
+    file: '/faturas/2026-03',
     total: 'R$ 3.916,46',
     banks: ['Itaú Black', 'PicPay', 'Bradesco 8429', 'Bradesco 5969', 'Nubank'],
   },
   {
     month: '2026-02',
     label: 'Fevereiro 2026',
-    file: '/faturas-2026-02.html',
+    file: '/faturas/2026-02',
     total: 'R$ 4.592,46',
     banks: ['Itaú Black', 'Bradesco 8429', 'Bradesco 5969'],
   },
