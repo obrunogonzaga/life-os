@@ -156,18 +156,18 @@ export default function FaturaDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-        <p className="text-neutral-500">Carregando...</p>
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <p className="text-slate-500">Carregando...</p>
       </div>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
         <div className="text-center">
           <p className="text-red-500 mb-4">{error || 'Fatura não encontrada'}</p>
-          <Link href="/faturas" className="text-pink-500 hover:underline">
+          <Link href="/faturas" className="text-teal-500 hover:underline">
             ← Voltar
           </Link>
         </div>
@@ -181,11 +181,11 @@ export default function FaturaDetailPage() {
     : transactions.filter((t) => t.bank === filter);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-neutral-200 p-4">
+    <div className="min-h-screen bg-slate-950 text-slate-200 p-4">
       <div className="max-w-3xl mx-auto">
         {/* Header */}
         <div className="flex items-center gap-3 mb-4">
-          <Link href="/faturas" className="text-neutral-500 hover:text-white">
+          <Link href="/faturas" className="text-slate-500 hover:text-white">
             ←
           </Link>
           <h1 className="text-xl font-bold">💳 {month.label}</h1>
@@ -193,21 +193,21 @@ export default function FaturaDetailPage() {
 
         {/* Summary Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-          <div className="bg-[#1a1a1a] rounded-xl p-3">
-            <div className="text-xs text-neutral-500 uppercase">Total geral</div>
-            <div className="text-lg font-bold text-yellow-400">{formatCurrency(stats.total)}</div>
+          <div className="bg-slate-900 rounded-xl p-3 border border-slate-800">
+            <div className="text-xs text-slate-500 uppercase">Total geral</div>
+            <div className="text-lg font-bold text-amber-400">{formatCurrency(stats.total)}</div>
           </div>
-          <div className="bg-[#1a1a1a] rounded-xl p-3">
-            <div className="text-xs text-neutral-500 uppercase">🩷 Alzi (total)</div>
+          <div className="bg-slate-900 rounded-xl p-3 border border-slate-800">
+            <div className="text-xs text-slate-500 uppercase">🩷 Alzi (total)</div>
             <div className="text-lg font-bold text-pink-400">{formatCurrency(stats.wife_total)}</div>
           </div>
-          <div className="bg-[#1a1a1a] rounded-xl p-3">
-            <div className="text-xs text-neutral-500 uppercase">🩷 Alzi paga ({stats.split_percent}%)</div>
+          <div className="bg-slate-900 rounded-xl p-3 border border-slate-800">
+            <div className="text-xs text-slate-500 uppercase">🩷 Alzi paga ({stats.split_percent}%)</div>
             <div className="text-lg font-bold text-pink-400 opacity-70">{formatCurrency(stats.wife_half)}</div>
           </div>
-          <div className="bg-[#1a1a1a] rounded-xl p-3">
-            <div className="text-xs text-neutral-500 uppercase">🔵 Bruno paga</div>
-            <div className="text-lg font-bold text-blue-400">{formatCurrency(stats.bruno_pays)}</div>
+          <div className="bg-slate-900 rounded-xl p-3 border border-slate-800">
+            <div className="text-xs text-slate-500 uppercase">🔵 Bruno paga</div>
+            <div className="text-lg font-bold text-teal-400">{formatCurrency(stats.bruno_pays)}</div>
           </div>
         </div>
 
@@ -217,8 +217,8 @@ export default function FaturaDetailPage() {
             onClick={() => setFilter('all')}
             className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
               filter === 'all' 
-                ? 'bg-neutral-700 text-white' 
-                : 'bg-[#1a1a1a] text-neutral-400 hover:bg-neutral-800'
+                ? 'bg-slate-700 text-white' 
+                : 'bg-slate-900 text-slate-400 hover:bg-slate-800'
             }`}
           >
             📋 Todos ({transactions.length})
@@ -230,7 +230,7 @@ export default function FaturaDetailPage() {
               className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
                 filter === bs.bank 
                   ? `${bankColors[bs.bank]} text-white` 
-                  : 'bg-[#1a1a1a] text-neutral-400 hover:bg-neutral-800'
+                  : 'bg-slate-900 text-slate-400 hover:bg-slate-800'
               }`}
             >
               {bankLabels[bs.bank] || bs.bank} ({bs.count})
@@ -242,23 +242,23 @@ export default function FaturaDetailPage() {
         <div className="flex gap-2 mb-4">
           <button
             onClick={selectAllVisible}
-            className="px-3 py-1.5 bg-[#222] border border-neutral-700 rounded-lg text-sm text-neutral-400 hover:bg-neutral-800"
+            className="px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-sm text-slate-400 hover:bg-slate-800"
           >
             Selecionar visíveis
           </button>
           <button
             onClick={deselectAllVisible}
-            className="px-3 py-1.5 bg-[#222] border border-neutral-700 rounded-lg text-sm text-neutral-400 hover:bg-neutral-800"
+            className="px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-sm text-slate-400 hover:bg-slate-800"
           >
             Limpar visíveis
           </button>
         </div>
 
         {/* Transaction List */}
-        <div className="bg-[#1a1a1a] rounded-xl overflow-hidden">
+        <div className="bg-slate-900 rounded-xl overflow-hidden border border-slate-800">
           <table className="w-full">
             <thead>
-              <tr className="text-xs text-neutral-500 uppercase border-b border-neutral-800">
+              <tr className="text-xs text-slate-500 uppercase border-b border-slate-800">
                 <th className="p-3 text-center w-12">🩷</th>
                 <th className="p-3 text-left">Data</th>
                 <th className="p-3 text-left">Estabelecimento</th>
@@ -270,8 +270,8 @@ export default function FaturaDetailPage() {
                 <tr
                   key={tx.id}
                   onClick={() => toggleWife(tx.id)}
-                  className={`border-b border-neutral-800/50 cursor-pointer transition-colors ${
-                    tx.is_wife ? 'bg-pink-950/30' : 'hover:bg-neutral-800/50'
+                  className={`border-b border-slate-800/50 cursor-pointer transition-colors ${
+                    tx.is_wife ? 'bg-pink-950/30' : 'hover:bg-slate-800/50'
                   } ${updating.has(tx.id) ? 'opacity-50' : ''}`}
                 >
                   <td className="p-3 text-center">
@@ -279,13 +279,13 @@ export default function FaturaDetailPage() {
                       type="checkbox"
                       checked={!!tx.is_wife}
                       onChange={() => {}}
-                      className="w-4 h-4 accent-pink-500 cursor-pointer"
+                      className="w-4 h-4 accent-teal-500 cursor-pointer"
                     />
                   </td>
                   <td className="p-3 text-sm">
                     {tx.date_label}
                     {tx.installment && (
-                      <span className="text-xs text-neutral-600 ml-1">
+                      <span className="text-xs text-slate-600 ml-1">
                         p.{tx.installment}
                       </span>
                     )}
@@ -293,12 +293,12 @@ export default function FaturaDetailPage() {
                   <td className="p-3">
                     <div className="flex items-center gap-2">
                       <span className="text-sm">{tx.name}</span>
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full text-white ${bankColors[tx.bank] || 'bg-neutral-600'}`}>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full text-white ${bankColors[tx.bank] || 'bg-slate-600'}`}>
                         {bankLabels[tx.bank] || tx.bank}
                       </span>
                     </div>
                     {tx.category && (
-                      <div className="text-xs text-neutral-600">{tx.category}</div>
+                      <div className="text-xs text-slate-600">{tx.category}</div>
                     )}
                   </td>
                   <td className="p-3 text-right font-medium tabular-nums">

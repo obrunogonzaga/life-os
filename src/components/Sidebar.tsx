@@ -56,15 +56,15 @@ export function Sidebar({ documents }: SidebarProps) {
   return (
     <aside
       className={`
-        h-screen bg-neutral-100 dark:bg-neutral-900 border-r border-neutral-200 dark:border-neutral-800
+        h-screen bg-slate-100 dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700
         flex flex-col transition-all duration-300 ease-in-out flex-shrink-0
         ${mounted ? (collapsed ? 'w-16' : 'w-64') : 'w-64'}
       `}
     >
       {/* Header */}
-      <div className="p-3 border-b border-neutral-200 dark:border-neutral-800">
+      <div className="p-3 border-b border-slate-200 dark:border-slate-700">
         <div className="flex items-center justify-between mb-2">
-          <Link href="/" className="flex items-center gap-2 text-neutral-900 dark:text-white font-semibold min-w-0">
+          <Link href="/" className="flex items-center gap-2 text-slate-900 dark:text-white font-semibold min-w-0">
             <span className="text-xl flex-shrink-0">🧠</span>
             {!collapsed && <span className="truncate">life-os</span>}
           </Link>
@@ -74,7 +74,7 @@ export function Sidebar({ documents }: SidebarProps) {
         {/* Toggle button */}
         <button
           onClick={toggle}
-          className="w-full flex items-center justify-center gap-2 px-2 py-1.5 rounded text-sm text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-200/50 dark:hover:bg-neutral-800/50 transition-colors"
+          className="w-full flex items-center justify-center gap-2 px-2 py-1.5 rounded text-sm text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-colors"
           title={collapsed ? 'Expandir sidebar' : 'Minimizar sidebar'}
         >
           <span className="flex-shrink-0">{collapsed ? '▶' : '◀'}</span>
@@ -88,8 +88,8 @@ export function Sidebar({ documents }: SidebarProps) {
             flex items-center gap-2 px-2 py-1.5 rounded text-sm font-medium transition-colors mt-1
             ${collapsed ? 'justify-center' : ''}
             ${pathname === '/canvas'
-              ? 'bg-yellow-500/15 text-yellow-700 dark:text-yellow-400'
-              : 'text-neutral-600 dark:text-neutral-400 hover:text-yellow-700 dark:hover:text-yellow-400 hover:bg-yellow-500/10'
+              ? 'bg-teal-500/15 text-teal-700 dark:text-teal-400'
+              : 'text-slate-600 dark:text-slate-400 hover:text-teal-700 dark:hover:text-teal-400 hover:bg-teal-500/10'
             }
           `}
           title="Canvas"
@@ -105,8 +105,8 @@ export function Sidebar({ documents }: SidebarProps) {
             flex items-center gap-2 px-2 py-1.5 rounded text-sm font-medium transition-colors mt-1
             ${collapsed ? 'justify-center' : ''}
             ${pathname?.startsWith('/faturas')
-              ? 'bg-pink-500/15 text-pink-700 dark:text-pink-400'
-              : 'text-neutral-600 dark:text-neutral-400 hover:text-pink-700 dark:hover:text-pink-400 hover:bg-pink-500/10'
+              ? 'bg-cyan-500/15 text-cyan-700 dark:text-cyan-400'
+              : 'text-slate-600 dark:text-slate-400 hover:text-cyan-700 dark:hover:text-cyan-400 hover:bg-cyan-500/10'
             }
           `}
           title="Faturas"
@@ -124,7 +124,7 @@ export function Sidebar({ documents }: SidebarProps) {
 
           return (
             <div key={type} className="mb-4">
-              <h3 className="px-2 py-1 text-xs font-medium text-neutral-500 uppercase tracking-wider">
+              <h3 className="px-2 py-1 text-xs font-medium text-slate-500 uppercase tracking-wider">
                 {typeIcons[type]} {typeLabels[type]}
               </h3>
               <ul className="mt-1 space-y-0.5">
@@ -139,8 +139,8 @@ export function Sidebar({ documents }: SidebarProps) {
                         className={`
                           block px-2 py-1.5 rounded text-sm transition-colors truncate
                           ${isActive
-                            ? 'bg-neutral-200 dark:bg-neutral-800 text-neutral-900 dark:text-white'
-                            : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-200/50 dark:hover:bg-neutral-800/50'
+                            ? 'bg-teal-500/20 dark:bg-teal-900/40 text-teal-900 dark:text-teal-100'
+                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-slate-800/50'
                           }
                         `}
                       >
@@ -171,7 +171,7 @@ export function Sidebar({ documents }: SidebarProps) {
       )}
 
       {/* Footer */}
-      <div className="p-3 border-t border-neutral-200 dark:border-neutral-800 text-xs text-neutral-500 text-center">
+      <div className="p-3 border-t border-slate-200 dark:border-slate-700 text-xs text-slate-500 text-center">
         {collapsed ? documents.length : `${documents.length} documents`}
       </div>
     </aside>

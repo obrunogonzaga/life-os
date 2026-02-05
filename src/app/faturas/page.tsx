@@ -54,24 +54,24 @@ export default function FaturasPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 flex items-center justify-center">
-        <p className="text-neutral-500">Carregando...</p>
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
+        <p className="text-slate-500">Carregando...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 p-6">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-6">
       <div className="max-w-2xl mx-auto">
-        <h1 className="text-2xl font-bold text-neutral-900 dark:text-white mb-2">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
           💳 Faturas
         </h1>
-        <p className="text-neutral-500 dark:text-neutral-400 mb-6">
+        <p className="text-slate-500 dark:text-slate-400 mb-6">
           Selecione o mês para visualizar e marcar transações
         </p>
 
         {months.length === 0 ? (
-          <div className="text-center py-12 text-neutral-500">
+          <div className="text-center py-12 text-slate-500">
             <p>Nenhuma fatura encontrada.</p>
           </div>
         ) : (
@@ -80,20 +80,20 @@ export default function FaturasPage() {
               <Link
                 key={m.id}
                 href={`/faturas/${m.id}`}
-                className="block bg-white dark:bg-neutral-900 rounded-xl p-4 border border-neutral-200 dark:border-neutral-800 hover:border-pink-500/50 hover:shadow-lg transition-all"
+                className="block bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-700 hover:border-teal-500/50 hover:shadow-lg transition-all"
               >
                 <div className="flex items-center justify-between mb-2">
-                  <h2 className="text-lg font-semibold text-neutral-900 dark:text-white">
+                  <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
                     {m.label}
                   </h2>
-                  <span className="text-pink-600 dark:text-pink-400 font-bold">
+                  <span className="text-teal-600 dark:text-teal-400 font-bold">
                     {formatCurrency(m.total)}
                   </span>
                 </div>
-                <div className="flex items-center justify-between text-sm text-neutral-500 mb-2">
+                <div className="flex items-center justify-between text-sm text-slate-500 mb-2">
                   <span>{m.tx_count} transações</span>
                   {m.wife_total && m.wife_total > 0 && (
-                    <span className="text-pink-500">
+                    <span className="text-cyan-500">
                       🩷 Alzi: {formatCurrency(m.wife_total)}
                     </span>
                   )}
@@ -113,8 +113,8 @@ export default function FaturasPage() {
           </div>
         )}
 
-        <div className="mt-8 p-4 bg-neutral-100 dark:bg-neutral-900 rounded-xl text-sm text-neutral-500 dark:text-neutral-400">
-          <p className="font-medium text-neutral-700 dark:text-neutral-300 mb-1">💡 Dica</p>
+        <div className="mt-8 p-4 bg-slate-100 dark:bg-slate-900 rounded-xl text-sm text-slate-500 dark:text-slate-400">
+          <p className="font-medium text-slate-700 dark:text-slate-300 mb-1">💡 Dica</p>
           <p>
             Clique nas transações para marcar como da Alzi. Os dados são salvos
             automaticamente no banco de dados.

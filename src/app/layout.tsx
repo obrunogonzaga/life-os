@@ -24,7 +24,7 @@ export default function RootLayout({
 
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
-      <body className={`${inter.className} bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 antialiased transition-colors`}>
+      <body className={`${inter.className} bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 antialiased transition-colors`}>
         <ThemeProvider>
           <div className="flex min-h-screen">
             <Sidebar documents={documents} />
