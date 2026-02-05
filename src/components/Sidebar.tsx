@@ -97,6 +97,23 @@ export function Sidebar({ documents }: SidebarProps) {
           <span className="flex-shrink-0">📊</span>
           {!collapsed && <span>Canvas</span>}
         </Link>
+
+        {/* Faturas link */}
+        <Link
+          href="/faturas"
+          className={`
+            flex items-center gap-2 px-2 py-1.5 rounded text-sm font-medium transition-colors mt-1
+            ${collapsed ? 'justify-center' : ''}
+            ${pathname?.startsWith('/faturas')
+              ? 'bg-pink-500/15 text-pink-700 dark:text-pink-400'
+              : 'text-neutral-600 dark:text-neutral-400 hover:text-pink-700 dark:hover:text-pink-400 hover:bg-pink-500/10'
+            }
+          `}
+          title="Faturas"
+        >
+          <span className="flex-shrink-0">💳</span>
+          {!collapsed && <span>Faturas</span>}
+        </Link>
       </div>
 
       {/* Document List */}
